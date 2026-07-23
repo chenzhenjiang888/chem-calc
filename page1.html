@@ -1,0 +1,676 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>卡式标定 / 回收液 / 反应液计算</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { padding: 10px; background: #f5f6f7; color: #333; font-size: 14px; }
+    .container { max-width: 720px; margin: 0 auto; }
+    .main-title { font-size: 17px; font-weight: 600; margin-bottom: 10px; text-align: center; }
+    .calc-card { background: #fff; border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 4px solid #4080ff; }
+    .calc-card.s2 { border-left-color: #67c23a; }
+    .calc-card.s3 { border-left-color: #e6a23c; }
+    .calc-card.s4 { border-left-color: #f56c6c; }
+    .stage-title { font-size: 13px; font-weight: 600; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .clear-btn { font-size: 12px; color: #909399; cursor: pointer; font-weight: normal; }
+    .sub-title { font-size: 13px; font-weight: 600; margin: 12px 0 6px; padding-left: 8px; border-left: 3px solid #67c23a; }
+    .input-label { font-size: 11px; color: #909399; margin-bottom: 2px; }
+    .input-label .hint { color: #c0c4cc; font-size: 10px; }
+    .input-group { display: flex; flex-direction: column; }
+    input { width: 100%; padding: 6px 8px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 13px; background: #fff; }
+    input:focus { outline: none; border-color: #4080ff; }
+    .input-row-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 8px; }
+    .input-row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+    .result-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
+    .result-box { background: #f4f7fa; border-radius: 6px; padding: 10px; text-align: center; }
+    .result-box .label { font-size: 12px; color: #606266; margin-bottom: 4px; }
+    .result-box .val { font-size: 15px; font-weight: 600; color: #4080ff; }
+    .result-box .unit { font-size: 11px; color: #909399; margin-top: 2px; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; }
+    th, td { border: 1px solid #ebeef5; padding: 6px 4px; text-align: center; color: #606266; }
+    th { background: #f5f7fa; font-weight: 500; color: #303133; }
+    table input { padding: 4px 6px; font-size: 12px; width: 100%; }
+    button { padding: 8px 12px; border: none; border-radius: 6px; background: #4080ff; color: white; font-size: 13px; cursor: pointer; }
+    .btn-clear { background: #909399; }
+    .btn-bar { display: flex; gap: 10px; margin: 12px 0; }
+    .warn-box { background: #fffbe6; color: #d48806; padding: 8px 10px; border-radius: 4px; font-size: 12px; margin: 8px 0; }
+    .warn-box.hidden { display: none; }
+    .result-green { color: #67c23a; font-weight: 600; }
+    .result-red { color: #f56c6c; font-weight: 600; }
+    .result-line { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #f4f7fa; border-radius: 4px; margin-top: 8px; font-size: 13px; }
+    .result-line .label { color: #606266; white-space: nowrap; }
+    .result-line .val { font-weight: 600; color: #4080ff; }
+    .result-line .val.green { color: #67c23a; }
+    .result-line .val.red { color: #f56c6c; }
+    .result-line .right { margin-left: auto; }
+    .sub-tab-bar { display: flex; gap: 8px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dashed #ebeef5; }
+    .sub-tab-btn { flex: 1; padding: 6px 10px; border: none; background: #f4f4f5; color: #606266; font-size: 12px; border-radius: 4px; cursor: pointer; font-weight: 500; }
+    .sub-tab-btn.active { background: #4080ff; color: white; }
+    .sub-panel { display: none; }
+    .sub-panel.active { display: block; }
+    .highlight-val { font-size: 18px !important; font-weight: 700 !important; color: #f56c6c !important; background: #fff5f5; padding: 2px 8px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="main-title">卡式标定 / 回收液 / 反应液计算</div>
+
+  <!-- 卡式水分标定 -->
+  <div class="calc-card">
+    <div class="stage-title"><span>卡式水分标定</span><span class="clear-btn" onclick="clearKarl()">清空</span></div>
+    <div class="input-row-2">
+      <div class="input-group"><div class="input-label">空白体积 (mL)</div><input type="number" step="0.01" id="karl-blank" value="0.50" oninput="calcKarl()"></div>
+    </div>
+    <table>
+      <thead><tr><th>序号</th><th>水分称重 (g)</th><th>消耗体积 (mL)</th><th>滴定度 (g/mL)</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><input step="0.0001" id="k1-w" value="0.0257" oninput="calcKarl()"></td><td><input step="0.01" id="k1-v" value="5.10" oninput="calcKarl()"></td><td id="k1-t"></td></tr>
+        <tr><td>2</td><td><input step="0.0001" id="k2-w" value="0.0257" oninput="calcKarl()"></td><td><input step="0.01" id="k2-v" value="5.10" oninput="calcKarl()"></td><td id="k2-t"></td></tr>
+        <tr><td>3</td><td><input step="0.0001" id="k3-w" value="0.0246" oninput="calcKarl()"></td><td><input step="0.01" id="k3-v" value="4.95" oninput="calcKarl()"></td><td id="k3-t"></td></tr>
+      </tbody>
+    </table>
+    <div class="result-grid-2">
+      <div class="result-box"><div class="label">滴定度平均值</div><div class="val" id="karl-avg">—</div><div class="unit">g/mL</div></div>
+      <div class="result-box"><div class="label">相对标准偏差</div><div class="val" id="karl-rsd">—</div><div class="unit">%</div></div>
+    </div>
+  </div>
+
+  <!-- 公共参数 -->
+  <div class="calc-card s2">
+    <div class="stage-title">反应液 / 回收液 公共参数</div>
+    <div class="input-row-3">
+      <div class="input-group"><div class="input-label">盐酸浓度 (mol/L)</div><input step="0.0001" id="acid-conc" value="0.09943" oninput="syncAllCalc()"></div>
+      <div class="input-group"><div class="input-label">滴定度 (g/mL) <span class="hint">可手动修改</span></div><input id="titer-link-show" oninput="syncTiterManual()"></div>
+      <div class="input-group"><div class="input-label">水分空白 (mL)</div><input step="0.01" id="sample-blank" value="0.21" oninput="syncAllCalc()"></div>
+    </div>
+    <input type="hidden" id="titer-link">
+  </div>
+
+  <!-- 回收液计算 -->
+  <div class="calc-card s3">
+    <div class="stage-title"><span>回收液计算</span><span class="clear-btn" onclick="clearRecycle()">清空</span></div>
+
+    <div class="sub-title">氨浓度</div>
+    <div class="sub-tab-bar">
+      <button class="sub-tab-btn active" onclick="openSubTab(event,'recycle-nh3-rev')">体积推算</button>
+      <button class="sub-tab-btn" onclick="openSubTab(event,'recycle-nh3-fwd')">验算</button>
+    </div>
+    <div id="recycle-nh3-rev" class="sub-panel active">
+      <div class="input-group"><div class="input-label">目标氨浓度 (%)</div><input step="0.01" id="recycle-nh3-target" value="9.18" oninput="calcRecycleNh3Rev()"></div>
+      <div class="result-line"><span class="label">理论消耗体积</span><span class="val" id="recycle-nh3-rev-v">—</span><span class="right" id="recycle-nh3-rev-tip"></span></div>
+    </div>
+    <div id="recycle-nh3-fwd" class="sub-panel">
+      <div class="input-group"><div class="input-label">消耗体积 (mL)</div><input step="0.01" id="recycle-nh3-fwd-v" oninput="calcRecycleNh3Fwd()"></div>
+      <div class="result-line"><span class="label">实测氨含量</span><span class="val green" id="recycle-nh3-fwd-val">—</span></div>
+    </div>
+
+    <div class="sub-title">水含量</div>
+    <div class="sub-tab-bar">
+      <button class="sub-tab-btn active" onclick="openSubTab(event,'recycle-water-rev')">体积推算</button>
+      <button class="sub-tab-btn" onclick="openSubTab(event,'recycle-water-fwd')">验算</button>
+    </div>
+    <div id="recycle-water-rev" class="sub-panel active">
+      <div class="input-group"><div class="input-label">目标水含量 (%)</div><input step="0.01" id="recycle-water-target" value="25.16" oninput="calcRecycleWaterRev()"></div>
+      <div class="result-line"><span class="label">理论消耗体积</span><span class="val" id="recycle-water-rev-v">—</span><span class="right" id="recycle-water-rev-tip"></span></div>
+    </div>
+    <div id="recycle-water-fwd" class="sub-panel">
+      <div class="input-group"><div class="input-label">消耗体积 (mL)</div><input step="0.01" id="recycle-water-fwd-v" oninput="calcRecycleWaterFwd()"></div>
+      <div class="result-line"><span class="label">实测水含量</span><span class="val green" id="recycle-water-fwd-val">—</span></div>
+    </div>
+
+    <div class="sub-title">异丙醇浓度验算</div>
+    <div class="input-row-2">
+      <div class="input-group"><div class="input-label">氨浓度 (%)<span id="recycle-nh3-status" class="result-red">待验证</span></div><input id="recycle-ipa-nh3" disabled></div>
+      <div class="input-group"><div class="input-label">水含量 (%)<span id="recycle-water-status" class="result-red">待验证</span></div><input id="recycle-ipa-water" disabled></div>
+    </div>
+    <div class="warn-box" id="recycle-ipa-warn">氨浓度和水含量均需验证通过后才能计算</div>
+    <div class="input-row-2">
+      <div class="input-group"><div class="input-label">设定异丙醇浓度 (%)</div><input step="0.01" id="recycle-ipa-conc" value="49.66" oninput="calcRecycleIpa()"></div>
+      <div class="input-group"><div class="input-label">空瓶重 (g)</div><input step="0.0001" id="recycle-bottle-wt" value="16.5648" oninput="calcRecycleIpa()"></div>
+    </div>
+
+    <div class="result-grid-2">
+      <div class="result-box"><div class="label">设定浓度</div><div class="val" id="recycle-theory-sample">—</div><div class="unit">%</div></div>
+      <div class="result-box"><div class="label">实际浓度</div><div class="val" id="recycle-theory-total">—</div><div class="unit">%</div></div>
+    </div>
+    <div class="result-grid-2">
+      <div class="result-box"><div class="label">理论样品重量</div><div class="val" id="recycle-theory-weight">—</div><div class="unit">g</div></div>
+      <div class="result-box"><div class="label">理论瓶+样重</div><div class="val" id="recycle-theory-total-weight">—</div><div class="unit">g</div></div>
+    </div>
+
+    <div class="input-row-2" style="margin-top:12px">
+      <div class="input-group"><div class="input-label">空瓶重 (g) <span class="hint">自动读取</span></div><input id="recycle-check-bottle" disabled></div>
+      <div class="input-group"><div class="input-label">实测瓶+样重 (g)</div><input step="0.0001" id="recycle-real-total" placeholder="输入瓶+样重" oninput="calcRecycleIpa()"></div>
+    </div>
+    <div class="result-grid-2">
+      <div class="result-box"><div class="label">实测样品重量</div><div class="val" id="recycle-real-sample">—</div><div class="unit">g</div></div>
+      <div class="result-box"><div class="label">浓度偏差</div><div class="val" id="recycle-weight-diff">—</div><div class="unit">%</div></div>
+    </div>
+    <div class="result-line" style="background: #f0f9ff; justify-content: center;">
+      <span class="label">验算结果：</span><span class="val" id="recycle-check-result">请输入参数</span>
+    </div>
+  </div>
+
+  <!-- 反应液计算（与回收液对称） -->
+  <div class="calc-card s4">
+    <div class="stage-title"><span>反应液计算</span><span class="clear-btn" onclick="clearReaction()">清空</span></div>
+
+    <div class="sub-title">氨浓度</div>
+    <div class="sub-tab-bar">
+      <button class="sub-tab-btn active" onclick="openSubTab(event,'react-nh3-rev')">体积推算</button>
+      <button class="sub-tab-btn" onclick="openSubTab(event,'react-nh3-fwd')">验算</button>
+    </div>
+    <div id="react-nh3-rev" class="sub-panel active">
+      <div class="input-group"><div class="input-label">目标氨浓度 (%)</div><input step="0.01" id="react-nh3-target" value="9.18" oninput="calcReactNh3Rev()"></div>
+      <div class="result-line"><span class="label">理论消耗体积</span><span class="val" id="react-nh3-rev-v">—</span><span class="right" id="react-nh3-rev-tip"></span></div>
+    </div>
+    <div id="react-nh3-fwd" class="sub-panel">
+      <div class="input-group"><div class="input-label">消耗体积 (mL)</div><input step="0.01" id="react-nh3-fwd-v" oninput="calcReactNh3Fwd()"></div>
+      <div class="result-line"><span class="label">实测氨含量</span><span class="val green" id="react-nh3-fwd-val">—</span></div>
+    </div>
+
+    <div class="sub-title">水含量</div>
+    <div class="sub-tab-bar">
+      <button class="sub-tab-btn active" onclick="openSubTab(event,'react-water-rev')">体积推算</button>
+      <button class="sub-tab-btn" onclick="openSubTab(event,'react-water-fwd')">验算</button>
+    </div>
+    <div id="react-water-rev" class="sub-panel active">
+      <div class="input-group"><div class="input-label">目标水含量 (%)</div><input step="0.01" id="react-water-target" value="25.16" oninput="calcReactWaterRev()"></div>
+      <div class="result-line"><span class="label">理论消耗体积</span><span class="val" id="react-water-rev-v">—</span><span class="right" id="react-water-rev-tip"></span></div>
+    </div>
+    <div id="react-water-fwd" class="sub-panel">
+      <div class="input-group"><div class="input-label">消耗体积 (mL)</div><input step="0.01" id="react-water-fwd-v" oninput="calcReactWaterFwd()"></div>
+      <div class="result-line"><span class="label">实测水含量</span><span class="val green" id="react-water-fwd-val">—</span></div>
+    </div>
+
+    <div class="sub-title">异丙醇浓度验算</div>
+    <div class="input-row-2">
+      <div class="input-group"><div class="input-label">氨浓度 (%)<span id="react-nh3-status" class="result-red">待验证</span></div><input id="react-ipa-nh3" disabled></div>
+      <div class="input-group"><div class="input-label">水含量 (%)<span id="react-water-status" class="result-red">待验证</span></div><input id="react-ipa-water" disabled></div>
+    </div>
+    <div class="warn-box" id="react-ipa-warn">氨浓度和水含量均需验证通过后才能计算</div>
+    <div class="input-row-2">
+      <div class="input-group"><div class="input-label">设定异丙醇浓度 (%)</div><input step="0.01" id="react-ipa-conc" value="49.66" oninput="calcReactIpa()"></div>
+      <div class="input-group"><div class="input-label">空瓶重 (g)</div><input step="0.0001" id="react-bottle-wt" value="16.5648" oninput="calcReactIpa()"></div>
+    </div>
+
+    <div class="result-grid-2">
+      <div class="result-box"><div class="label">设定浓度</div><div class="val" id="react-theory-sample">—</div><div class="unit">%</div></div>
+      <div class="result-box"><div class="label">实际浓度</div><div class="val" id="react-theory-total">—</div><div class="unit">%</div></div>
+    </div>
+    <div class="result-grid-2">
+      <div class="result-box"><div class="label">理论样品重量</div><div class="val" id="react-theory-weight">—</div><div class="unit">g</div></div>
+      <div class="result-box"><div class="label">理论瓶+样重</div><div class="val" id="react-theory-total-weight">—</div><div class="unit">g</div></div>
+    </div>
+
+    <div class="input-row-2" style="margin-top:12px">
+      <div class="input-group"><div class="input-label">空瓶重 (g) <span class="hint">自动读取</span></div><input id="react-check-bottle" disabled></div>
+      <div class="input-group"><div class="input-label">实测瓶+样重 (g)</div><input step="0.0001" id="react-real-total" placeholder="输入瓶+样重" oninput="calcReactIpa()"></div>
+    </div>
+    <div class="result-grid-2">
+      <div class="result-box"><div class="label">实测样品重量</div><div class="val" id="react-real-sample">—</div><div class="unit">g</div></div>
+      <div class="result-box"><div class="label">浓度偏差</div><div class="val" id="react-weight-diff">—</div><div class="unit">%</div></div>
+    </div>
+    <div class="result-line" style="background: #f0f9ff; justify-content: center;">
+      <span class="label">验算结果：</span><span class="val" id="react-check-result">请输入参数</span>
+    </div>
+  </div>
+
+  <div class="btn-bar"><button class="btn-clear" onclick="clearTab1()">清空全部</button></div>
+</div>
+
+<script>
+// ========== 精确银行家舍入 ==========
+function roundBanker(num, places) {
+  if (isNaN(num) || num === null || num === '') return '';
+  let str = Number(num).toFixed(places + 5);
+  let [intPart, decPart] = str.split('.');
+  if (!decPart || decPart.length <= places) return Number(num).toFixed(places);
+  let keep = decPart.substring(0, places);
+  let next = decPart[places];
+  let afterNext = decPart.substring(places + 1);
+  let carry = 0;
+  if (next > '5') { carry = 1; }
+  else if (next === '5') {
+    if (afterNext.replace(/0+$/, '') !== '') { carry = 1; }
+    else {
+      let lastKeep = keep[keep.length - 1];
+      if (parseInt(lastKeep) % 2 === 1) { carry = 1; }
+    }
+  }
+  if (carry) {
+    let intKeep = parseInt(keep) + 1;
+    keep = intKeep.toString().padStart(places, '0');
+    if (keep.length > places) {
+      intPart = (parseInt(intPart) + 1).toString();
+      keep = keep.substring(1);
+    }
+  }
+  return intPart + '.' + keep.padEnd(places, '0');
+}
+function fmtPct(val, places=2){ return val===''||isNaN(val) ? '' : roundBanker(val, places)+'%'; }
+
+function openSubTab(evt, subId){
+  let parent = evt.currentTarget.closest('.calc-card');
+  parent.querySelectorAll('.sub-panel').forEach(p=>p.classList.remove('active'));
+  parent.querySelectorAll('.sub-tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(subId).classList.add('active');
+  evt.currentTarget.classList.add('active');
+}
+
+// ========== 自动保存与恢复（修复卡式标定数据丢失） ==========
+const STORAGE_KEY = 'page1_reaction_state';
+
+function saveState() {
+  const data = {};
+  // 所有 input
+  document.querySelectorAll('input[id], select[id]').forEach(el => {
+    if (el.type === 'checkbox' || el.type === 'radio') data[el.id] = el.checked;
+    else data[el.id] = el.value;
+  });
+  // 结果显示（包括卡式标定的三个滴定度）
+  const resultIds = [
+    'k1-t','k2-t','k3-t','karl-avg','karl-rsd',
+    'recycle-nh3-rev-v','recycle-nh3-rev-tip','recycle-nh3-fwd-val',
+    'recycle-water-rev-v','recycle-water-rev-tip','recycle-water-fwd-val',
+    'recycle-ipa-nh3','recycle-ipa-water','recycle-check-bottle',
+    'recycle-theory-sample','recycle-theory-total','recycle-real-sample',
+    'recycle-weight-diff','recycle-theory-weight','recycle-theory-total-weight',
+    'recycle-check-result',
+    'react-nh3-rev-v','react-nh3-rev-tip','react-nh3-fwd-val',
+    'react-water-rev-v','react-water-rev-tip','react-water-fwd-val',
+    'react-ipa-nh3','react-ipa-water','react-check-bottle',
+    'react-theory-sample','react-theory-total','react-real-sample',
+    'react-weight-diff','react-theory-weight','react-theory-total-weight',
+    'react-check-result'
+  ];
+  resultIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) data[id] = el.innerText;
+  });
+  // 状态变量
+  data['recycleNh3Ok'] = recycleNh3Ok;
+  data['recycleNh3Val'] = recycleNh3Val;
+  data['recycleWaterOk'] = recycleWaterOk;
+  data['recycleWaterVal'] = recycleWaterVal;
+  data['reactNh3Ok'] = reactNh3Ok;
+  data['reactNh3Val'] = reactNh3Val;
+  data['reactWaterOk'] = reactWaterOk;
+  data['reactWaterVal'] = reactWaterVal;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+let saveTimeout;
+function debouncedSave() {
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(saveState, 300);
+}
+
+function loadState() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) return false;
+  const data = JSON.parse(saved);
+  // 恢复 input
+  document.querySelectorAll('input[id], select[id]').forEach(el => {
+    if (data[el.id] !== undefined) {
+      if (el.type === 'checkbox' || el.type === 'radio') el.checked = data[el.id];
+      else el.value = data[el.id];
+    }
+  });
+  // 恢复结果显示
+  const resultIds = [
+    'k1-t','k2-t','k3-t','karl-avg','karl-rsd',
+    'recycle-nh3-rev-v','recycle-nh3-rev-tip','recycle-nh3-fwd-val',
+    'recycle-water-rev-v','recycle-water-rev-tip','recycle-water-fwd-val',
+    'recycle-ipa-nh3','recycle-ipa-water','recycle-check-bottle',
+    'recycle-theory-sample','recycle-theory-total','recycle-real-sample',
+    'recycle-weight-diff','recycle-theory-weight','recycle-theory-total-weight',
+    'recycle-check-result',
+    'react-nh3-rev-v','react-nh3-rev-tip','react-nh3-fwd-val',
+    'react-water-rev-v','react-water-rev-tip','react-water-fwd-val',
+    'react-ipa-nh3','react-ipa-water','react-check-bottle',
+    'react-theory-sample','react-theory-total','react-real-sample',
+    'react-weight-diff','react-theory-weight','react-theory-total-weight',
+    'react-check-result'
+  ];
+  resultIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && data[id] !== undefined) el.innerText = data[id];
+  });
+  // 恢复状态变量
+  if (data['recycleNh3Ok'] !== undefined) recycleNh3Ok = data['recycleNh3Ok'];
+  if (data['recycleNh3Val'] !== undefined) recycleNh3Val = data['recycleNh3Val'];
+  if (data['recycleWaterOk'] !== undefined) recycleWaterOk = data['recycleWaterOk'];
+  if (data['recycleWaterVal'] !== undefined) recycleWaterVal = data['recycleWaterVal'];
+  if (data['reactNh3Ok'] !== undefined) reactNh3Ok = data['reactNh3Ok'];
+  if (data['reactNh3Val'] !== undefined) reactNh3Val = data['reactNh3Val'];
+  if (data['reactWaterOk'] !== undefined) reactWaterOk = data['reactWaterOk'];
+  if (data['reactWaterVal'] !== undefined) reactWaterVal = data['reactWaterVal'];
+  return true;
+}
+
+function clearStorage() { localStorage.removeItem(STORAGE_KEY); }
+document.addEventListener('input', debouncedSave);
+document.addEventListener('change', debouncedSave);
+
+// ========== 卡式标定 ==========
+function calcKarl(){
+  const blank = Number(document.getElementById('karl-blank').value)||0;
+  const w1=Number(document.getElementById('k1-w').value)||0, v1=Number(document.getElementById('k1-v').value)||0;
+  const w2=Number(document.getElementById('k2-w').value)||0, v2=Number(document.getElementById('k2-v').value)||0;
+  const w3=Number(document.getElementById('k3-w').value)||0, v3=Number(document.getElementById('k3-v').value)||0;
+  const calcT = (w, v) => v-blank > 0 ? w / (v - blank) : '';
+  const t1 = calcT(w1, v1), t2 = calcT(w2, v2), t3 = calcT(w3, v3);
+  document.getElementById('k1-t').innerText = t1 ? roundBanker(t1,6) : '';
+  document.getElementById('k2-t').innerText = t2 ? roundBanker(t2,6) : '';
+  document.getElementById('k3-t').innerText = t3 ? roundBanker(t3,6) : '';
+  const arr = [t1, t2, t3].filter(t => t !== '');
+  if(arr.length > 0){
+    const avg = arr.reduce((a,b)=>a+b,0)/arr.length;
+    document.getElementById('karl-avg').innerText = roundBanker(avg,6);
+    document.getElementById('titer-link').value = avg.toFixed(6);
+    document.getElementById('titer-link-show').value = roundBanker(avg,6);
+    if(arr.length >= 2){
+      const std = Math.sqrt(arr.map(x=>Math.pow(x-avg,2)).reduce((a,b)=>a+b,0)/(arr.length-1));
+      document.getElementById('karl-rsd').innerText = roundBanker(std/avg*100,2);
+    }else document.getElementById('karl-rsd').innerText = '—';
+  }else{
+    document.getElementById('karl-avg').innerText = '—';
+    document.getElementById('titer-link').value = '';
+    document.getElementById('titer-link-show').value = '';
+    document.getElementById('karl-rsd').innerText = '—';
+  }
+  syncAllCalc();
+}
+function clearKarl(){
+  document.getElementById('karl-blank').value = '0.50';
+  ['k1-w','k1-v','k2-w','k2-v','k3-w','k3-v'].forEach(id=>document.getElementById(id).value='');
+  calcKarl();
+  saveState();
+}
+
+function syncTiterManual() {
+  const val = document.getElementById('titer-link-show').value;
+  document.getElementById('titer-link').value = val;
+  calcRecycleWaterRev();
+  calcReactWaterRev();
+  calcRecycleIpa();
+  calcReactIpa();
+}
+
+function setHighlight(el) { if(el) el.classList.add('highlight-val'); }
+function removeHighlight(el) { if(el) el.classList.remove('highlight-val'); }
+
+// ====== 回收液 ======
+let recycleNh3Ok = false, recycleNh3Val = 0;
+let recycleWaterOk = false, recycleWaterVal = 0;
+
+function calcRecycleNh3Rev(){
+  const acidC = Number(document.getElementById('acid-conc').value)||0;
+  const target = Number(document.getElementById('recycle-nh3-target').value)||0;
+  const vEl = document.getElementById('recycle-nh3-rev-v');
+  const tipEl = document.getElementById('recycle-nh3-rev-tip');
+  if(acidC<=0||target<=0){
+    vEl.innerText='—'; tipEl.innerText=''; removeHighlight(vEl);
+    recycleNh3Ok=false; recycleNh3Val=0; calcRecycleIpa(); return;
+  }
+  const vRaw = target * 0.2 / (acidC * 0.01703) / 100;
+  const vFix = roundBanker(vRaw, 2);
+  const real = acidC * 0.01703 * parseFloat(vFix) / 0.2 * 100;
+  recycleNh3Val = parseFloat(roundBanker(real, 2));
+  recycleNh3Ok = (roundBanker(recycleNh3Val,2) === roundBanker(target,2));
+  vEl.innerText = vFix; setHighlight(vEl);
+  tipEl.innerText = recycleNh3Ok ? '✓ 验证通过' : '⚠ 含量不匹配';
+  tipEl.className = recycleNh3Ok ? 'result-green' : 'result-red';
+  document.getElementById('recycle-nh3-fwd-v').value = vFix;
+  calcRecycleNh3Fwd();
+  calcRecycleIpa();
+}
+function calcRecycleNh3Fwd(){
+  const acidC=Number(document.getElementById('acid-conc').value)||0;
+  const v=Number(document.getElementById('recycle-nh3-fwd-v').value)||0;
+  const resEl = document.getElementById('recycle-nh3-fwd-val');
+  if(acidC<=0||v<=0) { resEl.innerText='—'; removeHighlight(resEl); }
+  else { resEl.innerText=fmtPct(acidC*0.01703*v/0.2*100,4); setHighlight(resEl); }
+}
+
+function calcRecycleWaterRev(){
+  const titer = Number(document.getElementById('titer-link').value)||0;
+  const target = Number(document.getElementById('recycle-water-target').value)||0;
+  const blank = Number(document.getElementById('sample-blank').value)||0;
+  const vEl = document.getElementById('recycle-water-rev-v');
+  const tipEl = document.getElementById('recycle-water-rev-tip');
+  if(titer<=0||target<=0){
+    vEl.innerText='—'; tipEl.innerText=''; removeHighlight(vEl);
+    recycleWaterOk=false; recycleWaterVal=0; calcRecycleIpa(); return;
+  }
+  const vRaw = target * 0.2 / titer / 100 + blank;
+  const vFix = roundBanker(vRaw, 2);
+  const real = titer * (parseFloat(vFix) - blank) / 0.2 * 100;
+  recycleWaterVal = parseFloat(roundBanker(real, 2));
+  recycleWaterOk = (roundBanker(recycleWaterVal,2) === roundBanker(target,2));
+  vEl.innerText = vFix; setHighlight(vEl);
+  tipEl.innerText = recycleWaterOk ? '✓ 验证通过' : '⚠ 含量不匹配';
+  tipEl.className = recycleWaterOk ? 'result-green' : 'result-red';
+  document.getElementById('recycle-water-fwd-v').value = vFix;
+  calcRecycleWaterFwd();
+  calcRecycleIpa();
+}
+function calcRecycleWaterFwd(){
+  const titer=Number(document.getElementById('titer-link').value)||0;
+  const v=Number(document.getElementById('recycle-water-fwd-v').value)||0;
+  const blank=Number(document.getElementById('sample-blank').value)||0;
+  const resEl = document.getElementById('recycle-water-fwd-val');
+  if(titer<=0||v<=blank) { resEl.innerText='—'; removeHighlight(resEl); }
+  else { resEl.innerText=fmtPct(titer*(v-blank)/0.2*100,4); setHighlight(resEl); }
+}
+
+function calcRecycleIpa(){
+  document.getElementById('recycle-ipa-nh3').value = recycleNh3Ok ? recycleNh3Val.toFixed(2) : '';
+  document.getElementById('recycle-ipa-water').value = recycleWaterOk ? recycleWaterVal.toFixed(2) : '';
+  document.getElementById('recycle-check-bottle').value = (document.getElementById('recycle-bottle-wt').value || '');
+  const nh3Status = document.getElementById('recycle-nh3-status');
+  const waterStatus = document.getElementById('recycle-water-status');
+  nh3Status.innerText = recycleNh3Ok ? '已验证' : '待验证';
+  nh3Status.className = recycleNh3Ok ? 'result-green' : 'result-red';
+  waterStatus.innerText = recycleWaterOk ? '已验证' : '待验证';
+  waterStatus.className = recycleWaterOk ? 'result-green' : 'result-red';
+  const ipaConc = Number(document.getElementById('recycle-ipa-conc').value)||0;
+  const bottleWt = Number(document.getElementById('recycle-bottle-wt').value)||0;
+  const realTotal = Number(document.getElementById('recycle-real-total').value)||0;
+  document.getElementById('recycle-theory-sample').innerText = ipaConc.toFixed(2);
+  document.getElementById('recycle-theory-total').innerText = '—';
+  document.getElementById('recycle-real-sample').innerText = '—';
+  document.getElementById('recycle-weight-diff').innerText = '—';
+  document.getElementById('recycle-theory-weight').innerText = '—';
+  document.getElementById('recycle-theory-total-weight').innerText = '—';
+  const checkRes = document.getElementById('recycle-check-result');
+  if(!recycleNh3Ok || !recycleWaterOk){
+    document.getElementById('recycle-ipa-warn').classList.remove('hidden');
+    checkRes.innerText = '参数未验证'; checkRes.className = 'val result-red';
+    return;
+  }
+  document.getElementById('recycle-ipa-warn').classList.add('hidden');
+  const totalConc = recycleNh3Val + recycleWaterVal + ipaConc;
+  const theorySample = totalConc / 10;
+  const theoryTotalWeight = bottleWt + theorySample;
+  document.getElementById('recycle-theory-weight').innerText = roundBanker(theorySample, 4);
+  document.getElementById('recycle-theory-total-weight').innerText = roundBanker(theoryTotalWeight, 4);
+  if(realTotal > 0 && bottleWt > 0 && realTotal > bottleWt){
+    const realSample = realTotal - bottleWt;
+    const realIpaConc = (realSample * 10) - recycleNh3Val - recycleWaterVal;
+    document.getElementById('recycle-real-sample').innerText = roundBanker(realSample, 4);
+    document.getElementById('recycle-theory-total').innerText = roundBanker(realIpaConc, 2);
+    const diff = Math.abs(realIpaConc - ipaConc);
+    document.getElementById('recycle-weight-diff').innerText = roundBanker(diff, 2);
+    checkRes.innerText = diff <= 0.05 ? '✓ 浓度验算通过 (偏差' + roundBanker(diff,2) + '%)' : '⚠ 浓度偏差偏大 (偏差' + roundBanker(diff,2) + '%)';
+    checkRes.className = 'val ' + (diff <= 0.05 ? 'result-green' : 'result-red');
+  } else {
+    checkRes.innerText = '请输入瓶+样重'; checkRes.className = 'val';
+  }
+}
+function clearRecycle(){
+  document.getElementById('recycle-nh3-target').value='9.18';
+  document.getElementById('recycle-water-target').value='25.16';
+  document.getElementById('recycle-ipa-conc').value='49.66';
+  document.getElementById('recycle-bottle-wt').value='16.5648';
+  document.getElementById('recycle-nh3-fwd-v').value='';
+  document.getElementById('recycle-water-fwd-v').value='';
+  document.getElementById('recycle-real-total').value='';
+  calcRecycleNh3Rev();
+  calcRecycleWaterRev();
+  saveState();
+}
+
+// ====== 反应液（与回收液对称） ======
+let reactNh3Ok = false, reactNh3Val = 0;
+let reactWaterOk = false, reactWaterVal = 0;
+
+function calcReactNh3Rev(){
+  const acidC = Number(document.getElementById('acid-conc').value)||0;
+  const target = Number(document.getElementById('react-nh3-target').value)||0;
+  const vEl = document.getElementById('react-nh3-rev-v');
+  const tipEl = document.getElementById('react-nh3-rev-tip');
+  if(acidC<=0||target<=0){
+    vEl.innerText='—'; tipEl.innerText=''; removeHighlight(vEl);
+    reactNh3Ok=false; reactNh3Val=0; calcReactIpa(); return;
+  }
+  const vRaw = target * 0.2 / (acidC * 0.01703) / 100;
+  const vFix = roundBanker(vRaw, 2);
+  const real = acidC * 0.01703 * parseFloat(vFix) / 0.2 * 100;
+  reactNh3Val = parseFloat(roundBanker(real, 2));
+  reactNh3Ok = (roundBanker(reactNh3Val,2) === roundBanker(target,2));
+  vEl.innerText = vFix; setHighlight(vEl);
+  tipEl.innerText = reactNh3Ok ? '✓ 验证通过' : '⚠ 含量不匹配';
+  tipEl.className = reactNh3Ok ? 'result-green' : 'result-red';
+  document.getElementById('react-nh3-fwd-v').value = vFix;
+  calcReactNh3Fwd();
+  calcReactIpa();
+}
+function calcReactNh3Fwd(){
+  const acidC=Number(document.getElementById('acid-conc').value)||0;
+  const v=Number(document.getElementById('react-nh3-fwd-v').value)||0;
+  const resEl = document.getElementById('react-nh3-fwd-val');
+  if(acidC<=0||v<=0) { resEl.innerText='—'; removeHighlight(resEl); }
+  else { resEl.innerText=fmtPct(acidC*0.01703*v/0.2*100,4); setHighlight(resEl); }
+}
+
+function calcReactWaterRev(){
+  const titer = Number(document.getElementById('titer-link').value)||0;
+  const target = Number(document.getElementById('react-water-target').value)||0;
+  const blank = Number(document.getElementById('sample-blank').value)||0;
+  const vEl = document.getElementById('react-water-rev-v');
+  const tipEl = document.getElementById('react-water-rev-tip');
+  if(titer<=0||target<=0){
+    vEl.innerText='—'; tipEl.innerText=''; removeHighlight(vEl);
+    reactWaterOk=false; reactWaterVal=0; calcReactIpa(); return;
+  }
+  const vRaw = target * 0.2 / titer / 100 + blank;
+  const vFix = roundBanker(vRaw, 2);
+  const real = titer * (parseFloat(vFix) - blank) / 0.2 * 100;
+  reactWaterVal = parseFloat(roundBanker(real, 2));
+  reactWaterOk = (roundBanker(reactWaterVal,2) === roundBanker(target,2));
+  vEl.innerText = vFix; setHighlight(vEl);
+  tipEl.innerText = reactWaterOk ? '✓ 验证通过' : '⚠ 含量不匹配';
+  tipEl.className = reactWaterOk ? 'result-green' : 'result-red';
+  document.getElementById('react-water-fwd-v').value = vFix;
+  calcReactWaterFwd();
+  calcReactIpa();
+}
+function calcReactWaterFwd(){
+  const titer=Number(document.getElementById('titer-link').value)||0;
+  const v=Number(document.getElementById('react-water-fwd-v').value)||0;
+  const blank=Number(document.getElementById('sample-blank').value)||0;
+  const resEl = document.getElementById('react-water-fwd-val');
+  if(titer<=0||v<=blank) { resEl.innerText='—'; removeHighlight(resEl); }
+  else { resEl.innerText=fmtPct(titer*(v-blank)/0.2*100,4); setHighlight(resEl); }
+}
+
+function calcReactIpa(){
+  document.getElementById('react-ipa-nh3').value = reactNh3Ok ? reactNh3Val.toFixed(2) : '';
+  document.getElementById('react-ipa-water').value = reactWaterOk ? reactWaterVal.toFixed(2) : '';
+  document.getElementById('react-check-bottle').value = (document.getElementById('react-bottle-wt').value || '');
+  const nh3Status = document.getElementById('react-nh3-status');
+  const waterStatus = document.getElementById('react-water-status');
+  nh3Status.innerText = reactNh3Ok ? '已验证' : '待验证';
+  nh3Status.className = reactNh3Ok ? 'result-green' : 'result-red';
+  waterStatus.innerText = reactWaterOk ? '已验证' : '待验证';
+  waterStatus.className = reactWaterOk ? 'result-green' : 'result-red';
+  const ipaConc = Number(document.getElementById('react-ipa-conc').value)||0;
+  const bottleWt = Number(document.getElementById('react-bottle-wt').value)||0;
+  const realTotal = Number(document.getElementById('react-real-total').value)||0;
+  document.getElementById('react-theory-sample').innerText = ipaConc.toFixed(2);
+  document.getElementById('react-theory-total').innerText = '—';
+  document.getElementById('react-real-sample').innerText = '—';
+  document.getElementById('react-weight-diff').innerText = '—';
+  document.getElementById('react-theory-weight').innerText = '—';
+  document.getElementById('react-theory-total-weight').innerText = '—';
+  const checkRes = document.getElementById('react-check-result');
+  if(!reactNh3Ok || !reactWaterOk){
+    document.getElementById('react-ipa-warn').classList.remove('hidden');
+    checkRes.innerText = '参数未验证'; checkRes.className = 'val result-red';
+    return;
+  }
+  document.getElementById('react-ipa-warn').classList.add('hidden');
+  const totalConc = reactNh3Val + reactWaterVal + ipaConc;
+  const theorySample = totalConc / 10;
+  const theoryTotalWeight = bottleWt + theorySample;
+  document.getElementById('react-theory-weight').innerText = roundBanker(theorySample, 4);
+  document.getElementById('react-theory-total-weight').innerText = roundBanker(theoryTotalWeight, 4);
+  if(realTotal > 0 && bottleWt > 0 && realTotal > bottleWt){
+    const realSample = realTotal - bottleWt;
+    const realIpaConc = (realSample * 10) - reactNh3Val - reactWaterVal;
+    document.getElementById('react-real-sample').innerText = roundBanker(realSample, 4);
+    document.getElementById('react-theory-total').innerText = roundBanker(realIpaConc, 2);
+    const diff = Math.abs(realIpaConc - ipaConc);
+    document.getElementById('react-weight-diff').innerText = roundBanker(diff, 2);
+    checkRes.innerText = diff <= 0.05 ? '✓ 浓度验算通过 (偏差' + roundBanker(diff,2) + '%)' : '⚠ 浓度偏差偏大 (偏差' + roundBanker(diff,2) + '%)';
+    checkRes.className = 'val ' + (diff <= 0.05 ? 'result-green' : 'result-red');
+  } else {
+    checkRes.innerText = '请输入瓶+样重'; checkRes.className = 'val';
+  }
+}
+function clearReaction(){
+  document.getElementById('react-nh3-target').value='9.18';
+  document.getElementById('react-water-target').value='25.16';
+  document.getElementById('react-ipa-conc').value='49.66';
+  document.getElementById('react-bottle-wt').value='16.5648';
+  document.getElementById('react-nh3-fwd-v').value='';
+  document.getElementById('react-water-fwd-v').value='';
+  document.getElementById('react-real-total').value='';
+  calcReactNh3Rev();
+  calcReactWaterRev();
+  saveState();
+}
+
+function syncAllCalc(){
+  calcRecycleNh3Rev();
+  calcRecycleWaterRev();
+  calcReactNh3Rev();
+  calcReactWaterRev();
+}
+
+function clearTab1(){
+  clearKarl();
+  document.getElementById('acid-conc').value='0.09943';
+  document.getElementById('sample-blank').value='0.21';
+  clearRecycle();
+  clearReaction();
+  clearStorage();
+}
+
+window.onload = function(){
+  const restored = loadState();
+  if (!restored) {
+    calcKarl();
+  } else {
+    // 已经恢复了输入值和结果，但需要重新触发一次计算以确保依赖关系正确
+    calcKarl();
+    syncAllCalc();
+  }
+};
+</script>
+</body>
+</html>

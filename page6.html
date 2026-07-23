@@ -1,0 +1,727 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QC检验综合计算器</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { padding: 10px; background: #f5f6f7; color: #333; font-size: 14px; }
+    .container { max-width: 720px; margin: 0 auto; }
+    .main-title { font-size: 17px; font-weight: 600; margin-bottom: 10px; text-align: center; }
+    .tab-bar { display: flex; gap: 0; margin-bottom: 12px; background: #fff; border-radius: 8px; padding: 4px; }
+    .tab-btn { flex: 1; padding: 10px 6px; border: none; background: transparent; color: #606266; font-size: 13px; font-weight: 500; border-radius: 6px; cursor: pointer; }
+    .tab-btn.active { background: #4080ff; color: white; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .section-title { font-size: 14px; font-weight: 600; margin: 14px 0 6px; padding-left: 8px; border-left: 3px solid #4080ff; }
+    .sub-title { font-size: 13px; font-weight: 600; margin: 12px 0 6px; padding-left: 8px; border-left: 3px solid #67c23a; }
+    .stage-title { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #303133; }
+    input { width: 100%; padding: 6px 8px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 13px; background: #fff; }
+    input:focus { outline: none; border-color: #4080ff; }
+    input:disabled { background: #f4f4f5; color: #909399; }
+    .input-label { font-size: 11px; color: #909399; margin-bottom: 2px; }
+    .input-label .hint { color: #c0c4cc; font-size: 10px; }
+    .input-group { display: flex; flex-direction: column; }
+    .next-day-tag { font-size: 9px; margin: 0 1px; font-weight: 500; background:#ffecec; padding:1px 3px; border-radius:2px; }
+
+    .dry-stage { background: #fff; border-radius: 8px; padding: 10px; margin-bottom: 8px; border-left: 4px solid #4080ff; }
+    .dry-stage.s2 { border-left-color: #67c23a; } .dry-stage.s3 { border-left-color: #e6a23c; } .dry-stage.s4 { border-left-color: #f56c6c; }
+    .dry-start-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed #ebeef5; }
+    .dry-duration-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
+    .dry-timeline { display: flex; flex-direction: column; gap: 5px; }
+    .dry-timeline .timeline-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; background: #f9fafb; border-radius: 4px; font-size: 12px; }
+    .dry-timeline .node-name { color: #606266; font-size: 12px; }
+    .dry-timeline .node-range { font-weight: 600; color: #4080ff; font-size: 12px; white-space: nowrap; }
+    .dry-timeline .weigh { background: #fef0f0; } .dry-timeline .weigh .node-name { color: #f56c6c; font-weight: 500; }
+    .dry-timeline .weigh .node-range { color: #f56c6c; } .dry-timeline .cool { background: #ecf5ff; } .dry-timeline .cool .node-name { color: #4080ff; }
+
+    button { padding: 8px 12px; border: none; border-radius: 6px; background: #4080ff; color: white; font-size: 14px; cursor: pointer; }
+    button.del { background: #f56c6c; } button.copy { background: #67c23a; } button.clear-all { background: #909399; }
+    button.mode-btn { background: #e4e7ed; color: #606266; flex: 1; font-weight: 500; }
+    button.mode-btn.active { background: #4080ff; color: white; }
+    .global-mode-bar { display: flex; gap: 8px; margin-bottom: 12px; background: #fff; padding: 10px; border-radius: 8px; }
+    .row-item { background: #fff; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+    .input-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    .info-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    .info-box { padding: 8px; background: #f4f7fa; border-radius: 4px; font-size: 14px; text-align: center; color: #606266; }
+    .result-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 8px; align-items: center; }
+    .result-text { padding: 10px; background: #ecf5ff; border-radius: 4px; font-size: 15px; font-weight: 500; color: #4080ff; }
+    .add-row-bar { display: flex; gap: 10px; margin: 12px 0; }
+
+    .ignite-stage { background: #fff; border-radius: 8px; padding: 10px; margin-bottom: 8px; border-left: 4px solid #4080ff; }
+    .ignite-stage.is2 { border-left-color: #67c23a; } .ignite-stage.is3 { border-left-color: #e6a23c; } .ignite-stage.is4 { border-left-color: #f56c6c; }
+    .ignite-start-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed #ebeef5; }
+    .mode-switch { display: flex; gap: 12px; margin-bottom: 8px; font-size: 12px; align-items: center; }
+    .mode-switch label { display: flex; align-items: center; gap: 4px; }
+    .ignite-dur-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
+    .ignite-dur-row.col-5 { grid-template-columns: repeat(5, 1fr); }
+    .ignite-timeline { display: flex; flex-direction: column; gap: 5px; }
+    .ignite-timeline .timeline-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; background: #f9fafb; border-radius: 4px; font-size: 12px; }
+    .ignite-timeline .node-name { color: #606266; font-size: 12px; }
+    .ignite-timeline .node-range { font-weight: 600; color: #4080ff; font-size: 12px; white-space: nowrap; }
+    .ignite-timeline .weigh { background: #fef0f0; } .ignite-timeline .weigh .node-name { color: #f56c6c; font-weight: 500; }
+    .ignite-timeline .weigh .node-range { color: #f56c6c; } .ignite-timeline .cool { background: #ecf5ff; } .ignite-timeline .cool .node-name { color: #4080ff; }
+    .tip-text { font-size:11px; color:#888; margin:4px 0; }
+
+    .balance-formula-card { background: #fff; border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 4px solid #e6a23c; }
+    .balance-formula-box { background: #fdf6ec; border-radius: 6px; padding: 12px; text-align: center; margin-bottom: 8px; }
+    .balance-formula-title { font-size: 13px; font-weight: 600; color: #e6a23c; margin-bottom: 8px; }
+    .balance-formula-main { font-size: 13px; line-height: 2; color: #2c3e50; }
+    .balance-fraction { display: inline-block; vertical-align: middle; text-align: center; margin: 0 4px; }
+    .balance-fraction .numerator { border-bottom: 1.5px solid #2c3e50; padding: 0 8px 4px 8px; font-size: 12px; }
+    .balance-fraction .denominator { padding: 4px 8px 0 8px; font-size: 12px; }
+    .balance-threshold-tip { font-size: 11px; color: #909399; text-align: center; }
+
+    .balance-group { border: 1px solid #ebeef5; border-radius: 8px; padding: 12px; margin-bottom: 15px; background: #fff; }
+    .balance-group-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .balance-group-header span { font-weight: 600; color: #303133; }
+    .balance-group-header button { padding: 4px 10px; font-size: 12px; }
+
+    .balance-base-card { background: #f9fafb; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+    .balance-input-item { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 10px; }
+    .balance-input-item:last-child { margin-bottom: 0; }
+    .balance-input-item label { font-size: 13px; color: #606266; white-space: nowrap; flex-shrink: 0; }
+    .balance-input-item .input-wrap { flex: 1; display: flex; align-items: center; gap: 4px; }
+    .balance-input-item input { flex: 1; text-align: right; }
+    .balance-unit { font-size: 12px; color: #909399; flex-shrink: 0; }
+
+    .balance-items-card { background: #f9fafb; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+    .balance-item-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .balance-item-row .item-name { flex: 2; } .balance-item-row .item-amount { flex: 1; }
+    .balance-item-del { width: 24px; height: 24px; border: none; background: #f56c6c; color: white; border-radius: 4px; font-size: 14px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .balance-add-btn { width: 100%; padding: 6px; border: 1px dashed #67c23a; background: #f0f9eb; color: #67c23a; border-radius: 4px; font-size: 12px; cursor: pointer; margin-top: 4px; }
+    .balance-total-amount { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ebeef5; font-size: 13px; color: #303133; display: flex; justify-content: space-between; align-items: center; }
+    .balance-total-amount .val { font-weight: 600; color: #67c23a; }
+    .balance-calc-wrap { margin: 15px 0; text-align: center; }
+    .balance-calc-btn { padding: 10px 40px; border: none; border-radius: 6px; background: #67c23a; color: white; font-size: 15px; font-weight: 500; cursor: pointer; }
+    .balance-result-box { padding: 12px; background: #ecf5ff; border-radius: 6px; text-align: center; font-size: 15px; font-weight: 500; color: #4080ff; margin-bottom: 10px; min-height: 44px; display: flex; align-items: center; justify-content: center; line-height: 1.6; flex-direction: column; }
+    .balance-result-box.abnormal { background: #fef0f0; color: #f56c6c; }
+    .balance-result-box.normal { background: #f0f9eb; color: #67c23a; }
+    .balance-req-card { background: #fff; border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 4px solid #e6a23c; }
+    .balance-req-title { font-size: 13px; font-weight: 600; color: #e6a23c; margin-bottom: 8px; }
+    .balance-req-list { font-size: 12px; color: #606266; line-height: 1.8; padding-left: 16px; }
+    .balance-req-list li { margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="main-title">QC检验综合计算器</div>
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="dry">干燥失重</button>
+    <button class="tab-btn" data-tab="ignite">炽灼残渣</button>
+    <button class="tab-btn" data-tab="balance">物料平衡</button>
+  </div>
+
+  <!-- 面板1：干燥失重 -->
+  <div class="tab-panel active" id="panel-dry">
+    <div class="section-title">⏱ 恒重流程时间推算</div>
+    <div class="dry-stage" id="dry1">
+      <div class="stage-title">① 空瓶一次恒重</div>
+      <div class="dry-start-row"><div class="input-group"><div class="input-label">放入烘箱时间 <span class="hint">（直接输数字，如855）</span></div><input class="start-time" type="text" value="08:55" id="dry1-start"></div></div>
+      <div class="dry-duration-row">
+        <div class="input-group"><div class="input-label">干燥 (分钟)</div><input class="dur-input" type="number" value="10" id="dry1-dry"></div>
+        <div class="input-group"><div class="input-label">冷却 (分钟)</div><input class="dur-input" type="number" value="30" id="dry1-cool"></div>
+        <div class="input-group"><div class="input-label">称量 (分钟)</div><input class="dur-input" type="number" value="5" id="dry1-weigh"></div>
+      </div>
+      <div class="dry-timeline"><div class="timeline-item"><span class="node-name">烘箱干燥</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item cool"><span class="node-name">干燥器冷却</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item weigh"><span class="node-name">★ 称量</span><span class="node-range">--:-- ~ --:--</span></div></div>
+    </div>
+    <div class="dry-stage s2" id="dry2">
+      <div class="stage-title">② 空瓶二次恒重</div>
+      <div class="dry-start-row"><div class="input-group"><div class="input-label">放入烘箱时间</div><input class="start-time" type="text" value="09:40" id="dry2-start"></div></div>
+      <div class="dry-duration-row">
+        <div class="input-group"><div class="input-label">恒重干燥 (分钟)</div><input class="dur-input" type="number" value="60" disabled id="dry2-dry"></div>
+        <div class="input-group"><div class="input-label">冷却 (分钟)</div><input class="dur-input" type="number" value="30" id="dry2-cool"></div>
+        <div class="input-group"><div class="input-label">称量 (分钟)</div><input class="dur-input" type="number" value="5" id="dry2-weigh"></div>
+      </div>
+      <div class="dry-timeline"><div class="timeline-item"><span class="node-name">烘箱恒重干燥</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item cool"><span class="node-name">干燥器冷却</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item weigh"><span class="node-name">★ 恒重称量</span><span class="node-range">--:-- ~ --:--</span></div></div>
+    </div>
+    <div class="dry-stage s3" id="dry3">
+      <div class="stage-title">③ 样品干燥</div>
+      <div class="dry-start-row"><div class="input-group"><div class="input-label">放入烘箱时间</div><input class="start-time" type="text" value="" id="dry3-start"></div></div>
+      <div class="dry-duration-row">
+        <div class="input-group"><div class="input-label">干燥 (小时)</div><input class="dur-input hour" type="number" step="0.5" value="4" id="dry3-dry"></div>
+        <div class="input-group"><div class="input-label">冷却 (分钟)</div><input class="dur-input" type="number" value="30" id="dry3-cool"></div>
+        <div class="input-group"><div class="input-label">称量 (分钟)</div><input class="dur-input" type="number" value="10" id="dry3-weigh"></div>
+      </div>
+      <div class="dry-timeline"><div class="timeline-item"><span class="node-name">烘箱干燥</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item cool"><span class="node-name">干燥器冷却</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item weigh"><span class="node-name">★ 样品称量</span><span class="node-range">--:-- ~ --:--</span></div></div>
+    </div>
+    <div class="dry-stage s4" id="dry4">
+      <div class="stage-title">④ 样品恒重</div>
+      <div class="dry-start-row"><div class="input-group"><div class="input-label">放入烘箱时间</div><input class="start-time" type="text" value="" id="dry4-start"></div></div>
+      <div class="dry-duration-row">
+        <div class="input-group"><div class="input-label">恒重干燥 (小时)</div><input class="dur-input hour" type="number" step="0.5" value="1" disabled id="dry4-dry"></div>
+        <div class="input-group"><div class="input-label">冷却 (分钟)</div><input class="dur-input" type="number" value="30" id="dry4-cool"></div>
+        <div class="input-group"><div class="input-label">称量 (分钟)</div><input class="dur-input" type="number" value="10" id="dry4-weigh"></div>
+      </div>
+      <div class="dry-timeline"><div class="timeline-item"><span class="node-name">烘箱恒重干燥</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item cool"><span class="node-name">干燥器冷却</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item weigh"><span class="node-name">★ 恒重称量</span><span class="node-range">--:-- ~ --:--</span></div></div>
+    </div>
+    <div class="section-title">⚖ 干燥失重计算</div>
+    <div class="global-mode-bar">
+      <button class="mode-btn active" data-mode="forward">正向：算干燥失重%</button>
+      <button class="mode-btn" data-mode="reverse">反向：算干后重量</button>
+    </div>
+    <div class="add-row-bar">
+      <button id="addRowBtn">新增一行</button>
+      <button class="clear-all" id="clearAllBtn">清空全部</button>
+    </div>
+    <div id="rowsBox"></div>
+  </div>
+
+  <!-- 面板2：炽灼残渣 -->
+  <div class="tab-panel" id="panel-ignite">
+    <div class="sub-title">🔥 空坩埚恒重 第一次</div>
+    <div class="ignite-stage" id="ignite1">
+      <div class="ignite-start-row"><div class="input-group"><div class="input-label">开炉升温时间</div><input class="start-time" type="text" value="08:30" id="ignite1-start"></div></div>
+      <div class="ignite-dur-row col-5">
+        <div class="input-group"><div class="input-label">升温(分)</div><input class="dur-input" type="number" value="60" id="ignite1-heat"></div>
+        <div class="input-group"><div class="input-label">温度监控(分)</div><input class="dur-input" type="number" value="5" id="ignite1-monitor"></div>
+        <div class="input-group"><div class="input-label">降温(分)</div><input class="dur-input" type="number" value="90" id="ignite1-cool-down"></div>
+        <div class="input-group"><div class="input-label">冷却(分)</div><input class="dur-input" type="number" value="30" id="ignite1-cool"></div>
+        <div class="input-group"><div class="input-label">称量(分)</div><input class="dur-input" type="number" value="5" id="ignite1-weigh"></div>
+      </div>
+      <div class="ignite-timeline"><div class="timeline-item"><span class="node-name">升温</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item"><span class="node-name">温度监控</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item"><span class="node-name">降温</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item cool"><span class="node-name">干燥器冷却</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item weigh"><span class="node-name">★ 称量</span><span class="node-range">--:-- ~ --:--</span></div></div>
+    </div>
+    <div class="sub-title">⚖ 空坩埚恒重（第二次）</div>
+    <div class="ignite-stage is2" id="ignite2">
+      <div class="ignite-start-row"><div class="input-group"><div class="input-label">再次升温时间</div><input class="start-time" type="text" value="11:40" id="ignite2-start"></div></div>
+      <div class="ignite-dur-row col-5">
+        <div class="input-group"><div class="input-label">升温(分)</div><input class="dur-input" type="number" value="60" id="ignite2-heat"></div>
+        <div class="input-group"><div class="input-label">恒重(分)</div><input class="dur-input" type="number" value="30" disabled id="ignite2-constant"></div>
+        <div class="input-group"><div class="input-label">降温(分)</div><input class="dur-input" type="number" value="90" id="ignite2-cool-down"></div>
+        <div class="input-group"><div class="input-label">冷却(分)</div><input class="dur-input" type="number" value="30" id="ignite2-cool"></div>
+        <div class="input-group"><div class="input-label">称量(分)</div><input class="dur-input" type="number" value="10" id="ignite2-weigh"></div>
+      </div>
+      <div class="ignite-timeline"><div class="timeline-item"><span class="node-name">升温</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item"><span class="node-name">恒温恒重</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item"><span class="node-name">降温</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item cool"><span class="node-name">干燥器冷却</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item weigh"><span class="node-name">★ 称量坩埚+样品</span><span class="node-range">--:-- ~ --:--</span></div></div>
+    </div>
+    <div class="sub-title">🧪 样品炽灼·灰化</div>
+    <div class="ignite-stage is3" id="ignite3">
+      <div class="mode-switch">
+        <label><input type="radio" name="burnMode" value="sameDay" checked> 当日连续流程</label>
+        <label><input type="radio" name="burnMode" value="nextDay"> 隔夜炭化模式</label>
+      </div>
+      <div class="tip-text">隔夜模式：起始时间填次日上班开高温炉的时间</div>
+      <div class="ignite-start-row"><div class="input-group"><div class="input-label">起始操作时间</div><input class="start-time" type="text" value="08:00" id="ignite3-start"></div></div>
+      <div class="ignite-dur-row col-5">
+        <div class="input-group"><div class="input-label">电炉炽灼(分)</div><input class="dur-input" type="number" value="90" id="ignite3-electric"></div>
+        <div class="input-group"><div class="input-label">入炉升温(分)</div><input class="dur-input" type="number" value="60" id="ignite3-heat"></div>
+        <div class="input-group"><div class="input-label">高温灰化(分)</div><input class="dur-input" type="number" value="60" id="ignite3-ash"></div>
+        <div class="input-group"><div class="input-label">降温(分)</div><input class="dur-input" type="number" value="90" id="ignite3-cool-down"></div>
+        <div class="input-group"><div class="input-label">冷却(分)</div><input class="dur-input" type="number" value="30" id="ignite3-cool"></div>
+      </div>
+      <div class="ignite-dur-row col-5"><div class="input-group"><div class="input-label">称量(分)</div><input class="dur-input" type="number" value="5" id="ignite3-weigh"></div></div>
+      <div class="ignite-timeline"><div class="timeline-item"><span class="node-name">电炉炽灼</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item"><span class="node-name">入炉升温</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item"><span class="node-name">高温灰化</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item"><span class="node-name">降温</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item cool"><span class="node-name">干燥器冷却</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item weigh"><span class="node-name">★ 样品炽灼后称重</span><span class="node-range">--:-- ~ --:--</span></div></div>
+    </div>
+    <div class="sub-title">🔁 样品恒重（如需）</div>
+    <div class="ignite-stage is4" id="ignite4">
+      <div class="ignite-start-row"><div class="input-group"><div class="input-label">再次升温时间</div><input class="start-time" type="text" value="20:55" id="ignite4-start"></div></div>
+      <div class="ignite-dur-row col-5">
+        <div class="input-group"><div class="input-label">升温(分)</div><input class="dur-input" type="number" value="60" id="ignite4-heat"></div>
+        <div class="input-group"><div class="input-label">恒重(分)</div><input class="dur-input" type="number" value="30" disabled id="ignite4-constant"></div>
+        <div class="input-group"><div class="input-label">降温(分)</div><input class="dur-input" type="number" value="90" id="ignite4-cool-down"></div>
+        <div class="input-group"><div class="input-label">冷却(分)</div><input class="dur-input" type="number" value="30" id="ignite4-cool"></div>
+        <div class="input-group"><div class="input-label">称量(分)</div><input class="dur-input" type="number" value="5" id="ignite4-weigh"></div>
+      </div>
+      <div class="ignite-timeline"><div class="timeline-item"><span class="node-name">升温</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item"><span class="node-name">恒温恒重</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item"><span class="node-name">降温</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item cool"><span class="node-name">干燥器冷却</span><span class="node-range">--:-- ~ --:--</span></div><div class="timeline-item weigh"><span class="node-name">★ 炽灼后二次称量</span><span class="node-range">--:-- ~ --:--</span></div></div>
+    </div>
+    <div style="text-align:right; margin-top:10px;">
+      <button class="clear-all" onclick="resetIgnite()">重置炽灼残渣</button>
+    </div>
+  </div>
+
+  <!-- 面板3：物料平衡 -->
+  <div class="tab-panel" id="panel-balance">
+    <div class="section-title">计算公式</div>
+    <div class="balance-formula-card">
+      <div class="balance-formula-box">
+        <div class="balance-formula-title">平衡率 =</div>
+        <div class="balance-formula-main">
+          <span class="balance-fraction"><span class="numerator">检验前毛重 - 检验后毛重 - 损耗量 - 实际检验总用量</span><span class="denominator">理论检验用量</span></span> × 100%
+        </div>
+      </div>
+      <div class="balance-threshold-tip">管控阈值：平衡率 ＜ 50%（仅判断上限）</div>
+    </div>
+    <div id="balanceGroupsContainer"></div>
+    <div style="display:flex; gap:10px; justify-content:center; margin:15px 0;">
+      <button onclick="addBalanceGroup()" style="background:#67c23a;">➕ 增加一组</button>
+      <button class="clear-all" onclick="clearAllBalance()">清空全部组</button>
+    </div>
+    <div class="balance-req-card">
+      <div class="balance-req-title">称量要求</div>
+      <ol class="balance-req-list">
+        <li>检验前毛重、检验后毛重、检验前用量，三台天平精度必须保持一致</li>
+        <li>正常称量损耗（称量纸、称量勺挂壁等）不计入损耗</li>
+        <li>操作不当洒落且可回收的，必须称量计入损耗量并备注说明</li>
+        <li>红外鉴别（红外）、液体样品豁免物料平衡计算</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== 精确银行家舍入 ==========
+function roundBanker(num, places) {
+  if (isNaN(num) || num === null || num === '') return '';
+  let str = Number(num).toFixed(places + 10);
+  let [intPart, decPart] = str.split('.');
+  if (!decPart || decPart.length <= places) return Number(num).toFixed(places);
+  let keep = decPart.substring(0, places);
+  let next = decPart[places];
+  let afterNext = decPart.substring(places + 1);
+  let carry = 0;
+  if (next > '5') carry = 1;
+  else if (next === '5') {
+    if (/[1-9]/.test(afterNext)) carry = 1;
+    else {
+      let lastKeep = keep[keep.length - 1];
+      if (parseInt(lastKeep) % 2 === 1) carry = 1;
+    }
+  }
+  if (carry) {
+    let intKeep = parseInt(keep) + 1;
+    keep = intKeep.toString().padStart(places, '0');
+    if (keep.length > places) {
+      intPart = (parseInt(intPart) + 1).toString();
+      keep = keep.substring(1);
+    }
+  }
+  return intPart + '.' + keep.padEnd(places, '0');
+}
+
+// ========== 自动保存与恢复 ==========
+const STORAGE_KEY = 'page6_qc_calc_state';
+
+function saveState() {
+  const data = {};
+  // 保存所有带id的输入框
+  document.querySelectorAll('input[id], select[id]').forEach(el => {
+    if (el.type === 'radio' || el.type === 'checkbox') data[el.id] = el.checked;
+    else data[el.id] = el.value;
+  });
+  // 保存当前活动标签
+  const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab;
+  if (activeTab) data.activeTab = activeTab;
+  // 干燥失重计算行
+  const rows = document.querySelectorAll('#rowsBox .row-item');
+  data.dryRows = rows.length;
+  rows.forEach((row, idx) => {
+    data['dryRow'+idx] = JSON.stringify({
+      w0: row.querySelector('.w0')?.value || '',
+      w1: row.querySelector('.w1')?.value || '',
+      w2: row.querySelector('.w2')?.value || ''
+    });
+  });
+  // 物料平衡组
+  const groups = document.querySelectorAll('.balance-group');
+  data.balanceGroupCount = groups.length;
+  groups.forEach((group, idx) => {
+    const items = [];
+    group.querySelectorAll('.balance-item-row').forEach(row => {
+      items.push({
+        name: row.querySelector('.item-name input')?.value || '',
+        amount: row.querySelector('.balance-item-input')?.value || '0'
+      });
+    });
+    data['balGroup'+idx] = JSON.stringify({
+      before: group.querySelector('.beforeWeight')?.value || '',
+      after: group.querySelector('.afterWeight')?.value || '',
+      loss: group.querySelector('.lossWeight')?.value || '0',
+      theory: group.querySelector('.theoryWeight')?.value || '',
+      items
+    });
+  });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+let saveTimeout;
+function debouncedSave() { clearTimeout(saveTimeout); saveTimeout = setTimeout(saveState, 300); }
+
+function loadState() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) return false;
+  const data = JSON.parse(saved);
+  // 恢复输入框
+  document.querySelectorAll('input[id], select[id]').forEach(el => {
+    if (data[el.id] !== undefined) {
+      if (el.type === 'radio' || el.type === 'checkbox') el.checked = data[el.id];
+      else el.value = data[el.id];
+    }
+  });
+  // 恢复活动标签
+  if (data.activeTab) {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.remove('active');
+      if (b.dataset.tab === data.activeTab) b.classList.add('active');
+    });
+    document.querySelectorAll('.tab-panel').forEach(p => {
+      p.classList.remove('active');
+      if (p.id === 'panel-' + data.activeTab) p.classList.add('active');
+    });
+  }
+  // 恢复干燥失重行
+  const rowsBox = document.getElementById('rowsBox');
+  rowsBox.innerHTML = '';
+  const dryCount = data.dryRows || 0;
+  for (let i=0; i<dryCount; i++) {
+    const rd = JSON.parse(data['dryRow'+i] || '{}');
+    const row = createRow();
+    row.querySelector('.w0').value = rd.w0 || '';
+    row.querySelector('.w1').value = rd.w1 || '';
+    row.querySelector('.w2').value = rd.w2 || '';
+    rowsBox.appendChild(row);
+    row.querySelector('.w0').dispatchEvent(new Event('input'));
+  }
+  if (dryCount === 0) rowsBox.appendChild(createRow());
+  // 恢复物料平衡组
+  const container = document.getElementById('balanceGroupsContainer');
+  container.innerHTML = '';
+  const balCount = data.balanceGroupCount || 1;
+  for (let i=0; i<balCount; i++) {
+    const gd = JSON.parse(data['balGroup'+i] || '{}');
+    container.appendChild(createBalanceGroup(gd));
+  }
+  if (balCount === 0) addBalanceGroup();
+  // 更新组编号
+  updateGroupNumbers();
+  bindAllDryStages();
+  bindAllIgniteStages();
+  return true;
+}
+
+function clearStorage() { localStorage.removeItem(STORAGE_KEY); }
+
+document.addEventListener('input', debouncedSave);
+document.addEventListener('change', debouncedSave);
+
+// ========== 标签切换 ==========
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+    saveState(); // 切换标签时保存
+  };
+});
+
+// ========== 时间工具 ==========
+function parseTime(str) {
+  if (!str) return null;
+  const digits = str.trim().replace(/[：:\s]/g, '');
+  if (!/^\d{3,4}$/.test(digits)) return null;
+  let h, m;
+  if (digits.length === 3) { h = parseInt(digits.charAt(0)); m = parseInt(digits.substr(1)); }
+  else { h = parseInt(digits.substr(0,2)); m = parseInt(digits.substr(2)); }
+  if (h<0 || h>23 || m<0 || m>59) return null;
+  return h*60 + m;
+}
+function fmtTime(totalMin) {
+  const nextDay = totalMin >= 1440;
+  const h = Math.floor(totalMin/60)%24;
+  const m = totalMin%60;
+  const str = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+  return { str, nextDay };
+}
+function renderRange(el, startMin, endMin) {
+  const s = fmtTime(startMin), e = fmtTime(endMin);
+  let html = '';
+  if (s.nextDay) html += '<span class="next-day-tag">次日</span>';
+  html += s.str + ' ~ ';
+  if (e.nextDay) html += '<span class="next-day-tag">次日</span>';
+  html += e.str;
+  el.innerHTML = html;
+}
+function autoFormatInput(input) {
+  const minutes = parseTime(input.value);
+  if (minutes !== null) {
+    const h = Math.floor(minutes/60), m = minutes%60;
+    input.value = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+  }
+}
+
+// ========== 干燥失重时间绑定 ==========
+function bindDryStage(stageEl) {
+  const startInput = stageEl.querySelector('.start-time');
+  const durInputs = stageEl.querySelectorAll('.dur-input');
+  const rangeNodes = stageEl.querySelectorAll('.timeline-item .node-range');
+  function getDurMin(inputEl, idx) {
+    const val = parseFloat(inputEl.value) || 0;
+    if (idx === 0 && inputEl.classList.contains('hour')) return val * 60;
+    return val;
+  }
+  function calc() {
+    const start = parseTime(startInput.value);
+    if (start === null) { rangeNodes.forEach(n => n.textContent = '--:-- ~ --:--'); return; }
+    let cursor = start;
+    rangeNodes.forEach((node, idx) => {
+      const dur = getDurMin(durInputs[idx], idx);
+      const stepEnd = cursor + dur;
+      renderRange(node, cursor, stepEnd);
+      cursor = stepEnd;
+    });
+  }
+  startInput.addEventListener('input', calc);
+  startInput.addEventListener('blur', () => autoFormatInput(startInput));
+  durInputs.forEach(inp => inp.addEventListener('input', calc));
+  calc();
+}
+function bindAllDryStages() {
+  ['dry1','dry2','dry3','dry4'].forEach(id => bindDryStage(document.getElementById(id)));
+}
+
+// ========== 炽灼残渣时间绑定 ==========
+function bindIgniteStage(stageEl) {
+  const startInput = stageEl.querySelector('.start-time');
+  const durInputs = stageEl.querySelectorAll('.dur-input');
+  const rangeNodes = stageEl.querySelectorAll('.timeline-item .node-range');
+  const modeRadios = document.querySelectorAll('input[name="burnMode"]');
+  function calc() {
+    const start = parseTime(startInput.value);
+    if (start === null) { rangeNodes.forEach(n => n.textContent = '--:-- ~ --:--'); return; }
+    let cursor = start;
+    let isOvernight = false;
+    if (stageEl.id === 'ignite3') {
+      const selected = document.querySelector('input[name="burnMode"]:checked').value;
+      isOvernight = (selected === 'nextDay');
+    }
+    rangeNodes.forEach((node, idx) => {
+      if (isOvernight && idx === 0) { node.innerHTML = '<span style="color:#aaa;">(前一日已完成)</span>'; return; }
+      const dur = parseFloat(durInputs[idx].value) || 0;
+      const stepEnd = cursor + dur;
+      renderRange(node, cursor, stepEnd);
+      cursor = stepEnd;
+    });
+  }
+  startInput.addEventListener('input', calc);
+  startInput.addEventListener('blur', () => autoFormatInput(startInput));
+  durInputs.forEach(inp => inp.addEventListener('input', calc));
+  if (modeRadios) modeRadios.forEach(rd => rd.addEventListener('change', calc));
+  calc();
+}
+function bindAllIgniteStages() {
+  ['ignite1','ignite2','ignite3','ignite4'].forEach(id => bindIgniteStage(document.getElementById(id)));
+}
+
+// ========== 干燥失重计算 ==========
+let globalMode = 'forward';
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    globalMode = btn.dataset.mode;
+    document.querySelectorAll('.row-item').forEach(row => {
+      row.querySelector('.third-label').textContent = globalMode === 'forward' ? '干燥后总重 W2 (g)' : '目标干燥失重 (%)';
+      row.querySelector('.w2').step = globalMode === 'forward' ? '0.0001' : '0.01';
+    });
+  };
+});
+
+function createRow() {
+  const row = document.createElement('div'); row.className = 'row-item';
+  row.innerHTML = `
+    <div class="input-row">
+      <div class="input-group"><div class="input-label">空瓶恒重 W0 (g)</div><input class="w0" type="number" step="0.0001"></div>
+      <div class="input-group"><div class="input-label">干燥前总重 W1 (g)</div><input class="w1" type="number" step="0.0001"></div>
+      <div class="input-group"><div class="input-label third-label">${globalMode === 'forward' ? '干燥后总重 W2 (g)' : '目标干燥失重 (%)'}</div><input class="w2" type="number" step="${globalMode === 'forward' ? '0.0001' : '0.01'}"></div>
+    </div>
+    <div class="info-row">
+      <div class="info-box">样品净重：<span class="sample-weight">--</span> g</div>
+      <div class="info-box">损失重量：<span class="water-weight">--</span> g</div>
+    </div>
+    <div class="result-row">
+      <div class="result-text">结果：请输入数据后点击计算</div>
+      <button class="calc-btn">计算</button>
+      <button class="copy-btn copy">复制</button>
+      <button class="del-btn del">删除</button>
+    </div>`;
+  const w0=row.querySelector('.w0'), w1=row.querySelector('.w1'), w2=row.querySelector('.w2');
+  const sampleBox=row.querySelector('.sample-weight'), lossBox=row.querySelector('.water-weight'), resBox=row.querySelector('.result-text');
+  function updateInfo() {
+    const w0v=parseFloat(w0.value), w1v=parseFloat(w1.value);
+    sampleBox.textContent = (!isNaN(w0v)&&!isNaN(w1v)&&w1v>w0v) ? (w1v-w0v).toFixed(4) : '--';
+    const val=parseFloat(w2.value);
+    if(!isNaN(w0v)&&!isNaN(w1v)&&!isNaN(val)&&w1v>w0v) {
+      const sample=w1v-w0v;
+      lossBox.textContent = globalMode==='forward' ? (w1v-val).toFixed(4) : (sample*val/100).toFixed(4);
+    } else lossBox.textContent='--';
+  }
+  w0.addEventListener('input', updateInfo); w1.addEventListener('input', updateInfo); w2.addEventListener('input', updateInfo);
+  row.querySelector('.calc-btn').onclick = () => {
+    const w0v=parseFloat(w0.value), w1v=parseFloat(w1.value), val=parseFloat(w2.value);
+    if(isNaN(w0v)||isNaN(w1v)||isNaN(val)) { resBox.textContent='结果：请填写完整数据'; return; }
+    if(w1v<=w0v) { resBox.textContent='结果：W1必须大于W0'; return; }
+    const sample=w1v-w0v;
+    if(globalMode==='forward') {
+      if(val<w0v) { resBox.textContent='结果：W2不能小于空瓶重'; return; }
+      const lossPct=((w1v-val)/sample)*100;
+      resBox.textContent = `干燥失重：${roundBanker(lossPct,2)} %`;
+    } else {
+      if(val<0||val>=100) { resBox.textContent='结果：失重率应在0~100之间'; return; }
+      resBox.textContent = `理论干后总重：${roundBanker(w1v-sample*val/100,4)} g`;
+    }
+    updateInfo();
+  };
+  row.querySelector('.copy-btn').onclick = async () => {
+    const text = resBox.textContent.replace('结果：','').trim();
+    if(text.includes('请')||text.includes('必须')) return alert('暂无有效结果');
+    try { await navigator.clipboard.writeText(text); alert('已复制'); } catch(e) { alert('复制失败'); }
+  };
+  row.querySelector('.del-btn').onclick = () => { row.remove(); saveState(); };
+  return row;
+}
+
+const rowsBox = document.getElementById('rowsBox');
+document.getElementById('addRowBtn').onclick = () => { rowsBox.appendChild(createRow()); saveState(); };
+document.getElementById('clearAllBtn').onclick = () => {
+  if(confirm('确定清空所有计算行吗？')) {
+    rowsBox.innerHTML = ''; rowsBox.appendChild(createRow()); saveState();
+  }
+};
+
+// ========== 炽灼残渣重置 ==========
+function resetIgnite() {
+  // 恢复所有炽灼残渣的默认值
+  document.getElementById('ignite1-start').value = '08:30';
+  document.getElementById('ignite1-heat').value = '60';
+  document.getElementById('ignite1-monitor').value = '5';
+  document.getElementById('ignite1-cool-down').value = '90';
+  document.getElementById('ignite1-cool').value = '30';
+  document.getElementById('ignite1-weigh').value = '5';
+  document.getElementById('ignite2-start').value = '11:40';
+  document.getElementById('ignite2-heat').value = '60';
+  document.getElementById('ignite2-cool-down').value = '90';
+  document.getElementById('ignite2-cool').value = '30';
+  document.getElementById('ignite2-weigh').value = '10';
+  document.getElementById('ignite3-start').value = '08:00';
+  document.getElementById('ignite3-electric').value = '90';
+  document.getElementById('ignite3-heat').value = '60';
+  document.getElementById('ignite3-ash').value = '60';
+  document.getElementById('ignite3-cool-down').value = '90';
+  document.getElementById('ignite3-cool').value = '30';
+  document.getElementById('ignite3-weigh').value = '5';
+  document.getElementById('ignite4-start').value = '20:55';
+  document.getElementById('ignite4-heat').value = '60';
+  document.getElementById('ignite4-cool-down').value = '90';
+  document.getElementById('ignite4-cool').value = '30';
+  document.getElementById('ignite4-weigh').value = '5';
+  document.querySelector('input[name="burnMode"][value="sameDay"]').checked = true;
+  // 重新计算时间线
+  bindAllIgniteStages();
+  saveState();
+}
+
+// ========== 物料平衡多组 ==========
+function createBalanceGroup(savedData = {}) {
+  const group = document.createElement('div'); group.className = 'balance-group';
+  group.innerHTML = `
+    <div class="balance-group-header"><span>第 1 组</span><button onclick="removeBalanceGroup(this)" style="background:#f56c6c;">删除组</button></div>
+    <div class="balance-base-card">
+      <div class="balance-input-item"><label>检验前毛重</label><div class="input-wrap"><input type="number" step="0.0001" class="beforeWeight" value="${savedData.before||''}"><span class="balance-unit">g</span></div></div>
+      <div class="balance-input-item"><label>检验后毛重</label><div class="input-wrap"><input type="number" step="0.0001" class="afterWeight" value="${savedData.after||''}"><span class="balance-unit">g</span></div></div>
+      <div class="balance-input-item"><label>损耗量（如有）</label><div class="input-wrap"><input type="number" step="0.0001" class="lossWeight" value="${savedData.loss||'0'}"><span class="balance-unit">g</span></div></div>
+      <div class="balance-input-item"><label>理论检验用量</label><div class="input-wrap"><input type="number" step="0.0001" class="theoryWeight" value="${savedData.theory||''}"><span class="balance-unit">g</span></div></div>
+    </div>
+    <div class="balance-items-card">
+      <div class="items-container"></div>
+      <button class="balance-add-btn" onclick="addBalanceItem(this)">+ 添加检验项目</button>
+      <div class="balance-total-amount"><span>实际检验总用量：</span><span><span class="val totalAmount">0</span> g</span></div>
+    </div>
+    <div class="balance-calc-wrap"><button class="balance-calc-btn" onclick="calcBalanceRate(this)">计算平衡率</button></div>
+    <div class="balance-result-box">计算结果将显示在此处</div>`;
+  const itemsContainer = group.querySelector('.items-container');
+  if(savedData.items && savedData.items.length > 0) {
+    savedData.items.forEach(item => addBalanceItemToGroup(group, item.name, item.amount));
+  } else {
+    addBalanceItemToGroup(group, '', '0');
+  }
+  group.querySelectorAll('input').forEach(inp => inp.addEventListener('input', () => { updateGroupTotal(group); saveState(); }));
+  updateGroupTotal(group);
+  return group;
+}
+function addBalanceItemToGroup(group, name='', amount='0') {
+  const container = group.querySelector('.items-container');
+  const row = document.createElement('div'); row.className = 'balance-item-row';
+  row.innerHTML = `
+    <div class="item-name"><input type="text" placeholder="检验项目（如：含量测定）" value="${name}"></div>
+    <div class="item-amount"><input type="number" step="0.0001" class="balance-item-input" value="${amount}"></div>
+    <button class="balance-item-del" onclick="delBalanceItem(this)">×</button>`;
+  container.appendChild(row);
+  row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', () => { updateGroupTotal(group); saveState(); }));
+  updateGroupTotal(group);
+}
+function addBalanceItem(btn) { const group = btn.closest('.balance-group'); addBalanceItemToGroup(group); saveState(); }
+function delBalanceItem(btn) {
+  const group = btn.closest('.balance-group');
+  if(group.querySelectorAll('.balance-item-row').length <= 1) { alert('至少保留一条检验项目'); return; }
+  btn.closest('.balance-item-row').remove();
+  updateGroupTotal(group); saveState();
+}
+function updateGroupTotal(group) {
+  let total=0, maxDec=0;
+  group.querySelectorAll('.balance-item-input').forEach(inp => {
+    const val=parseFloat(inp.value);
+    if(!isNaN(val)) { total+=val; const dec=(inp.value.split('.')[1]||'').length; if(dec>maxDec) maxDec=dec; }
+  });
+  group.querySelector('.totalAmount').textContent = total.toFixed(maxDec);
+}
+function calcBalanceRate(btn) {
+  const group = btn.closest('.balance-group');
+  const before = parseFloat(group.querySelector('.beforeWeight').value) || 0;
+  const after = parseFloat(group.querySelector('.afterWeight').value) || 0;
+  const loss = parseFloat(group.querySelector('.lossWeight').value) || 0;
+  const theory = parseFloat(group.querySelector('.theoryWeight').value) || 0;
+  const actual = parseFloat(group.querySelector('.totalAmount').textContent) || 0;
+  const resultBox = group.querySelector('.balance-result-box');
+  if(theory <= 0) { resultBox.textContent='请输入理论检验用量（必须大于0）'; resultBox.className='balance-result-box'; return; }
+  const diff = before - after - loss - actual;
+  const rate = roundBanker((diff/theory)*100, 2);
+  if (rate < 50) {
+    resultBox.className = 'balance-result-box normal';
+    resultBox.innerHTML = `物料平衡率：${rate} %<br>✓ 正常`;
+  } else {
+    resultBox.className = 'balance-result-box abnormal';
+    resultBox.innerHTML = `物料平衡率：${rate} %<br>⚠ 异常（超出50%上限）`;
+  }
+  saveState();
+}
+function addBalanceGroup() {
+  const container = document.getElementById('balanceGroupsContainer');
+  container.appendChild(createBalanceGroup({}));
+  updateGroupNumbers();
+  saveState();
+}
+function removeBalanceGroup(btn) {
+  const groups = document.querySelectorAll('.balance-group');
+  if(groups.length <= 1) { alert('至少保留一组'); return; }
+  btn.closest('.balance-group').remove();
+  updateGroupNumbers();
+  saveState();
+}
+function clearAllBalance() {
+  const container = document.getElementById('balanceGroupsContainer');
+  container.innerHTML = '';
+  container.appendChild(createBalanceGroup({}));
+  updateGroupNumbers();
+  saveState();
+}
+function updateGroupNumbers() {
+  document.querySelectorAll('.balance-group').forEach((g, idx) => {
+    g.querySelector('.balance-group-header span').textContent = `第 ${idx+1} 组`;
+  });
+}
+
+// 初始化
+window.onload = function() {
+  if(!loadState()) {
+    rowsBox.appendChild(createRow());
+    document.getElementById('balanceGroupsContainer').appendChild(createBalanceGroup({}));
+    bindAllDryStages();
+    bindAllIgniteStages();
+  } else {
+    bindAllDryStages();
+    bindAllIgniteStages();
+  }
+};
+</script>
+</body>
+</html>

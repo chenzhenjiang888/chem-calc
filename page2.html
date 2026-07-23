@@ -1,0 +1,370 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>吡啶含量计算</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { padding: 10px; background: #fff; color: #333; font-size: 14px; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .main-title { font-size: 18px; font-weight: 600; margin-bottom: 12px; text-align: center; }
+    .calc-card { background: #fff; border-radius: 10px; padding: 12px; margin-bottom: 10px; border-left: 4px solid #4080ff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .calc-card.s2 { border-left-color: #67c23a; }
+    .stage-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #303133; display: flex; justify-content: space-between; align-items: center; }
+    .input-label { font-size: 11px; color: #909399; margin-bottom: 2px; }
+    .input-group { display: flex; flex-direction: column; }
+    input { width: 100%; padding: 6px 8px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 13px; background: #fff; }
+    input:focus { outline: none; border-color: #4080ff; }
+    input:disabled { background: #f4f4f5; color: #909399; }
+    .input-row-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 8px; }
+    .input-row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+    .result-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
+    .result-box { background: #f4f7fa; border-radius: 6px; padding: 10px; text-align: center; }
+    .result-box .label { font-size: 12px; color: #606266; margin-bottom: 4px; }
+    .result-box .val { font-size: 15px; font-weight: 600; color: #4080ff; }
+    .result-box .unit { font-size: 11px; color: #909399; margin-top: 2px; }
+    .table-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px; }
+    .table-col { background: #fff; border-radius: 6px; padding: 8px; border: 1px solid #ebeef5; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: auto; }
+    th, td { border: 1px solid #ebeef5; padding: 4px 6px; text-align: center; color: #606266; white-space: nowrap; }
+    th { background: #f5f7fa; font-weight: 500; color: #303133; font-size: 12px; }
+    table input { padding: 4px 6px; font-size: 12px; width: 100%; border: none; background: transparent; text-align: center; min-width: 70px; }
+    table input:focus { background: #fafafa; }
+    button { padding: 8px 14px; border: none; border-radius: 6px; background: #4080ff; color: white; font-size: 13px; cursor: pointer; }
+    .btn-clear { background: #909399; }
+    .btn-bar { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; align-items: center; }
+    .result-line { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #f4f7fa; border-radius: 4px; margin-top: 8px; font-size: 13px; }
+    .result-line .label { color: #606266; white-space: nowrap; }
+    .result-line .val { font-weight: 600; color: #4080ff; }
+    .result-green { color: #67c23a; font-weight: 600; }
+    .formula-box { background: #f0f9ff; padding: 8px 12px; border-radius: 4px; font-size: 12px; color: #4080ff; margin: 8px 0; }
+    .param-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 8px; font-size: 11px; }
+    .param-item { text-align: center; background: #f4f7fa; padding: 4px 6px; border-radius: 4px; }
+    .param-item .plabel { color: #909399; }
+    .param-item .pval { font-weight: 600; color: #4080ff; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="main-title">吡啶含量计算</div>
+
+  <!-- 卡式水分标定 -->
+  <div class="calc-card">
+    <div class="stage-title"><span>卡式水分标定</span><span class="clear-btn" onclick="clearKarlPyr()">清空</span></div>
+    <div class="input-row-2">
+      <div class="input-group"><div class="input-label">空白体积 (mL)</div><input type="number" step="0.01" id="karl-blank-pyr" value="0.50" oninput="calcKarlPyr()"></div>
+    </div>
+    <table>
+      <thead><tr><th>序号</th><th>水分称重 (g)</th><th>消耗体积 (mL)</th><th>滴定度 (g/mL)</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><input step="0.0001" id="k1-w-pyr" value="0.0257" oninput="calcKarlPyr()"></td><td><input step="0.01" id="k1-v-pyr" value="5.10" oninput="calcKarlPyr()"></td><td id="k1-t-pyr"></td></tr>
+        <tr><td>2</td><td><input step="0.0001" id="k2-w-pyr" value="0.0257" oninput="calcKarlPyr()"></td><td><input step="0.01" id="k2-v-pyr" value="5.10" oninput="calcKarlPyr()"></td><td id="k2-t-pyr"></td></tr>
+        <tr><td>3</td><td><input step="0.0001" id="k3-w-pyr" value="0.0246" oninput="calcKarlPyr()"></td><td><input step="0.01" id="k3-v-pyr" value="4.95" oninput="calcKarlPyr()"></td><td id="k3-t-pyr"></td></tr>
+      </tbody>
+    </table>
+    <div class="result-grid-2">
+      <div class="result-box"><div class="label">滴定度平均值</div><div class="val" id="karl-avg-pyr">—</div><div class="unit">g/mL</div></div>
+      <div class="result-box"><div class="label">相对标准偏差</div><div class="val" id="karl-rsd-pyr">—</div><div class="unit">%</div></div>
+    </div>
+  </div>
+
+  <!-- 高氯酸浓度校正 -->
+  <div class="calc-card s2">
+    <div class="stage-title">高氯酸浓度校正</div>
+    <div class="formula-box">
+      校正浓度 = 标定浓度 / [1 + 0.0011 × (室温 − 标定温度)]
+    </div>
+    <div class="input-row-3">
+      <div class="input-group">
+        <div class="input-label">标定浓度 (mol/L)</div>
+        <input step="0.0001" id="pyr-calib" value="0.1033" onfocus="this.dataset.prev=this.value" onblur="if(this.value!==this.dataset.prev && !confirm('确定修改标定浓度？')){this.value=this.dataset.prev} else {calcPyrAll();}">
+      </div>
+      <div class="input-group">
+        <div class="input-label">标定温度 (℃)</div>
+        <input step="0.1" id="pyr-temp-cal" value="24.5" onfocus="this.dataset.prev=this.value" onblur="if(this.value!==this.dataset.prev && !confirm('确定修改标定温度？')){this.value=this.dataset.prev} else {calcPyrAll();}">
+      </div>
+      <div class="input-group">
+        <div class="input-label">室温 (℃)</div>
+        <input step="0.1" id="pyr-temp-room" value="26.5" oninput="calcPyrAll()">
+      </div>
+    </div>
+    <div class="result-line"><span class="label">校正后滴定浓度</span><span class="val green" id="pyr-real-conc"></span></div>
+  </div>
+
+  <!-- 吡啶双表格 -->
+  <div class="table-row">
+    <!-- 正算 -->
+    <div class="table-col">
+      <div class="stage-title">含量计算 (称样量 → 含量)</div>
+      <div class="param-row">
+        <div class="param-item"><span class="plabel">空白</span><br><span class="pval">0.02 mL</span></div>
+        <div class="param-item"><span class="plabel">常数</span><br><span class="pval">0.1212</span></div>
+        <div class="param-item"><span class="plabel">校正浓度</span><br><span class="pval" id="conc-disp-pos">0.1031</span></div>
+      </div>
+      <table id="pyridine-table">
+        <thead><tr><th style="width:8%">#</th><th style="width:30%">称样量 (g)</th><th style="width:30%">消耗体积 (mL)</th><th style="width:32%">含量 (%)</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><input id="p1-w" oninput="calcPyrAll()"></td><td><input id="p1-v" oninput="calcPyrAll()"></td><td id="p1-res"></td></tr>
+          <tr><td>2</td><td><input id="p2-w" oninput="calcPyrAll()"></td><td><input id="p2-v" oninput="calcPyrAll()"></td><td id="p2-res"></td></tr>
+          <tr><td>3</td><td><input id="p3-w" oninput="calcPyrAll()"></td><td><input id="p3-v" oninput="calcPyrAll()"></td><td id="p3-res"></td></tr>
+          <tr><td>4</td><td><input id="p4-w" oninput="calcPyrAll()"></td><td><input id="p4-v" oninput="calcPyrAll()"></td><td id="p4-res"></td></tr>
+          <tr><td>5</td><td><input id="p5-w" oninput="calcPyrAll()"></td><td><input id="p5-v" oninput="calcPyrAll()"></td><td id="p5-res"></td></tr>
+          <tr><td>6</td><td><input id="p6-w" oninput="calcPyrAll()"></td><td><input id="p6-v" oninput="calcPyrAll()"></td><td id="p6-res"></td></tr>
+        </tbody>
+      </table>
+      <button onclick="addPyridineRow()" style="margin-top:5px">➕ 新增行</button>
+    </div>
+    <!-- 反推 -->
+    <div class="table-col">
+      <div class="stage-title">反推体积 (含量 → 消耗体积)</div>
+      <div class="param-row">
+        <div class="param-item"><span class="plabel">空白</span><br><span class="pval">0.02 mL</span></div>
+        <div class="param-item"><span class="plabel">常数</span><br><span class="pval">0.1212</span></div>
+        <div class="param-item"><span class="plabel">校正浓度</span><br><span class="pval" id="conc-disp-rev">0.1031</span></div>
+      </div>
+      <table id="reverse-table">
+        <thead><tr><th style="width:8%">#</th><th style="width:30%">称样量 (g)</th><th style="width:30%">含量 (%)</th><th style="width:32%">计算体积 (mL)</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><input id="r1-w" oninput="calcPyrAll()"></td><td><input id="r1-pct" oninput="calcPyrAll()"></td><td id="r1-v"></td></tr>
+          <tr><td>2</td><td><input id="r2-w" oninput="calcPyrAll()"></td><td><input id="r2-pct" oninput="calcPyrAll()"></td><td id="r2-v"></td></tr>
+          <tr><td>3</td><td><input id="r3-w" oninput="calcPyrAll()"></td><td><input id="r3-pct" oninput="calcPyrAll()"></td><td id="r3-v"></td></tr>
+          <tr><td>4</td><td><input id="r4-w" oninput="calcPyrAll()"></td><td><input id="r4-pct" oninput="calcPyrAll()"></td><td id="r4-v"></td></tr>
+          <tr><td>5</td><td><input id="r5-w" oninput="calcPyrAll()"></td><td><input id="r5-pct" oninput="calcPyrAll()"></td><td id="r5-v"></td></tr>
+          <tr><td>6</td><td><input id="r6-w" oninput="calcPyrAll()"></td><td><input id="r6-pct" oninput="calcPyrAll()"></td><td id="r6-v"></td></tr>
+        </tbody>
+      </table>
+      <button onclick="addReverseRow()" style="margin-top:5px">➕ 新增行</button>
+    </div>
+  </div>
+
+  <div class="btn-bar">
+    <button class="btn-clear" onclick="clearTab2()">清空吡啶</button>
+  </div>
+</div>
+
+<script>
+  // ========== 精确银行家舍入 ==========
+  function roundBanker(num, places) {
+    if (isNaN(num) || num === null || num === '') return '';
+    let str = Number(num).toFixed(places + 10);
+    let [intPart, decPart] = str.split('.');
+    if (!decPart || decPart.length <= places) return Number(num).toFixed(places);
+    let keep = decPart.substring(0, places);
+    let next = decPart[places];
+    let afterNext = decPart.substring(places + 1);
+    let carry = 0;
+    if (next > '5') carry = 1;
+    else if (next === '5') {
+      if (/[1-9]/.test(afterNext)) carry = 1;
+      else {
+        let lastKeep = keep[keep.length - 1];
+        if (parseInt(lastKeep) % 2 === 1) carry = 1;
+      }
+    }
+    if (carry) {
+      let intKeep = parseInt(keep) + 1;
+      keep = intKeep.toString().padStart(places, '0');
+      if (keep.length > places) {
+        intPart = (parseInt(intPart) + 1).toString();
+        keep = keep.substring(1);
+      }
+    }
+    return intPart + '.' + keep.padEnd(places, '0');
+  }
+
+  // ========== 自动保存与恢复 ==========
+  const STORAGE_KEY = 'page2_pyridine_state';
+
+  function saveState() {
+    const data = {};
+    // 保存所有带id的输入框和选择框
+    document.querySelectorAll('input[id], select[id]').forEach(el => {
+      if (el.type === 'checkbox' || el.type === 'radio') {
+        data[el.id] = el.checked;
+      } else {
+        data[el.id] = el.value;
+      }
+    });
+    // 保存显示结果（如 karl-avg-pyr, pyr-real-conc 等）
+    document.querySelectorAll('[id$="-avg-pyr"], [id$="-rsd-pyr"], [id$="-t-pyr"], [id$="-real-conc"], [id$="-disp-pos"], [id$="-disp-rev"], [id$="-res"]').forEach(el => {
+      data[el.id] = el.innerText;
+    });
+    // 保存动态行数
+    data['pyridineRowCount'] = pyridineRowCount;
+    data['reverseRowCount'] = reverseRowCount;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  let saveTimeout;
+  function debouncedSave() {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(saveState, 300);
+  }
+
+  function loadState() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return false;
+    const data = JSON.parse(saved);
+    // 恢复动态行数并重建表格
+    const posTable = document.getElementById('pyridine-table').querySelector('tbody');
+    const revTable = document.getElementById('reverse-table').querySelector('tbody');
+    posTable.innerHTML = '';
+    revTable.innerHTML = '';
+    pyridineRowCount = data['pyridineRowCount'] || 6;
+    reverseRowCount = data['reverseRowCount'] || 6;
+    for (let i = 1; i <= pyridineRowCount; i++) {
+      addPyridineRowToTable(i);
+    }
+    for (let i = 1; i <= reverseRowCount; i++) {
+      addReverseRowToTable(i);
+    }
+    // 恢复输入框和结果
+    document.querySelectorAll('input[id], select[id]').forEach(el => {
+      if (data[el.id] !== undefined) {
+        if (el.type === 'checkbox' || el.type === 'radio') el.checked = data[el.id];
+        else el.value = data[el.id];
+      }
+    });
+    document.querySelectorAll('[id$="-avg-pyr"], [id$="-rsd-pyr"], [id$="-t-pyr"], [id$="-real-conc"], [id$="-disp-pos"], [id$="-disp-rev"], [id$="-res"]').forEach(el => {
+      if (data[el.id] !== undefined) el.innerText = data[el.id];
+    });
+    return true;
+  }
+
+  function clearStorage() { localStorage.removeItem(STORAGE_KEY); }
+
+  document.addEventListener('input', debouncedSave);
+  document.addEventListener('change', debouncedSave);
+
+  // ========== 卡式标定（吡啶页面） ==========
+  function calcKarlPyr() {
+    const blank = Number(document.getElementById('karl-blank-pyr').value) || 0;
+    const w1 = Number(document.getElementById('k1-w-pyr').value) || 0, v1 = Number(document.getElementById('k1-v-pyr').value) || 0;
+    const w2 = Number(document.getElementById('k2-w-pyr').value) || 0, v2 = Number(document.getElementById('k2-v-pyr').value) || 0;
+    const w3 = Number(document.getElementById('k3-w-pyr').value) || 0, v3 = Number(document.getElementById('k3-v-pyr').value) || 0;
+    const calcT = (w, v) => v - blank > 0 ? w / (v - blank) : '';
+    const t1 = calcT(w1, v1), t2 = calcT(w2, v2), t3 = calcT(w3, v3);
+    document.getElementById('k1-t-pyr').innerText = t1 ? roundBanker(t1, 6) : '';
+    document.getElementById('k2-t-pyr').innerText = t2 ? roundBanker(t2, 6) : '';
+    document.getElementById('k3-t-pyr').innerText = t3 ? roundBanker(t3, 6) : '';
+    const arr = [t1, t2, t3].filter(t => t !== '');
+    if (arr.length > 0) {
+      const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+      document.getElementById('karl-avg-pyr').innerText = roundBanker(avg, 6);
+      if (arr.length >= 2) {
+        const std = Math.sqrt(arr.map(x => Math.pow(x - avg, 2)).reduce((a, b) => a + b, 0) / (arr.length - 1));
+        document.getElementById('karl-rsd-pyr').innerText = roundBanker(std / avg * 100, 2);
+      } else document.getElementById('karl-rsd-pyr').innerText = '—';
+    } else {
+      document.getElementById('karl-avg-pyr').innerText = '—';
+      document.getElementById('karl-rsd-pyr').innerText = '—';
+    }
+  }
+  function clearKarlPyr() {
+    document.getElementById('karl-blank-pyr').value = '0.50';
+    ['k1-w-pyr', 'k1-v-pyr', 'k2-w-pyr', 'k2-v-pyr', 'k3-w-pyr', 'k3-v-pyr'].forEach(id => document.getElementById(id).value = '');
+    calcKarlPyr();
+    saveState();
+  }
+
+  // ========== 吡啶计算 ==========
+  let pyridineRowCount = 6;
+  let reverseRowCount = 6;
+
+  function addPyridineRowToTable(index) {
+    const tbody = document.querySelector('#pyridine-table tbody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${index}</td><td><input id="p${index}-w" oninput="calcPyrAll()"></td><td><input id="p${index}-v" oninput="calcPyrAll()"></td><td id="p${index}-res"></td>`;
+    tbody.appendChild(tr);
+  }
+  function addReverseRowToTable(index) {
+    const tbody = document.querySelector('#reverse-table tbody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${index}</td><td><input id="r${index}-w" oninput="calcPyrAll()"></td><td><input id="r${index}-pct" oninput="calcPyrAll()"></td><td id="r${index}-v"></td>`;
+    tbody.appendChild(tr);
+  }
+
+  function addPyridineRow() {
+    pyridineRowCount++;
+    addPyridineRowToTable(pyridineRowCount);
+    saveState();
+  }
+  function addReverseRow() {
+    reverseRowCount++;
+    addReverseRowToTable(reverseRowCount);
+    saveState();
+  }
+
+  function calcPyrAll() {
+    const blank = 0.02;
+    const constVal = 0.1212;
+    const calib = Number(document.getElementById('pyr-calib').value) || 0;
+    const tCal = Number(document.getElementById('pyr-temp-cal').value) || 0;
+    const tRoom = Number(document.getElementById('pyr-temp-room').value) || 0;
+    let realConc = 0;
+    if (calib > 0) realConc = calib / (1 + 0.0011 * (tRoom - tCal));
+    const conc4 = Number(roundBanker(realConc, 4));
+    document.getElementById('pyr-real-conc').innerText = conc4.toFixed(4);
+    document.getElementById('conc-disp-pos').innerText = conc4.toFixed(4);
+    document.getElementById('conc-disp-rev').innerText = conc4.toFixed(4);
+
+    // 正算
+    for (let i = 1; i <= pyridineRowCount; i++) {
+      const wEl = document.getElementById('p' + i + '-w');
+      const vEl = document.getElementById('p' + i + '-v');
+      const resEl = document.getElementById('p' + i + '-res');
+      if (!wEl || !vEl || !resEl) continue;
+      const w = Number(wEl.value) || 0;
+      const v = Number(vEl.value) || 0;
+      if (w > 0 && v > 0 && conc4 > 0) {
+        const content = (v - blank) * constVal * conc4 / w * 100;
+        resEl.innerText = roundBanker(content, 2);
+      } else resEl.innerText = '';
+    }
+
+    // 反推
+    for (let i = 1; i <= reverseRowCount; i++) {
+      const wEl = document.getElementById('r' + i + '-w');
+      const pctEl = document.getElementById('r' + i + '-pct');
+      const vEl = document.getElementById('r' + i + '-v');
+      if (!wEl || !pctEl || !vEl) continue;
+      const w = Number(wEl.value) || 0;
+      const pct = Number(pctEl.value) || 0;
+      if (w > 0 && pct > 0 && conc4 > 0) {
+        const v = (pct * w) / (constVal * conc4 * 100) + blank;
+        vEl.innerText = roundBanker(v, 2);
+      } else vEl.innerText = '';
+    }
+  }
+
+  function clearTab2() {
+    document.getElementById('pyr-calib').value = '0.1033';
+    document.getElementById('pyr-temp-cal').value = '24.5';
+    document.getElementById('pyr-temp-room').value = '26.5';
+    for (let i = 1; i <= pyridineRowCount; i++) {
+      const wEl = document.getElementById('p' + i + '-w'); if (wEl) wEl.value = '';
+      const vEl = document.getElementById('p' + i + '-v'); if (vEl) vEl.value = '';
+    }
+    for (let i = 1; i <= reverseRowCount; i++) {
+      const rwEl = document.getElementById('r' + i + '-w'); if (rwEl) rwEl.value = '';
+      const rpEl = document.getElementById('r' + i + '-pct'); if (rpEl) rpEl.value = '';
+    }
+    calcPyrAll();
+    clearStorage();
+    saveState();
+  }
+
+  window.onload = function () {
+    if (!loadState()) {
+      // 首次加载，确保表格默认6行（已在HTML中预置）
+      calcKarlPyr();
+      calcPyrAll();
+    } else {
+      calcKarlPyr();
+      calcPyrAll();
+    }
+  };
+</script>
+</body>
+</html>

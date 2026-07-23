@@ -1,0 +1,505 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>天平时间整理</title>
+<style>
+*{box-sizing:border-box;font-family:system-ui,-apple-system,sans-serif;margin:0;padding:0}
+body{background:#f4f6f9;padding:12px;max-width:960px;margin:0 auto;color:#222;font-size:14px}
+.panel{background:#fff;border-radius:10px;padding:14px;box-shadow:0 1px 6px #00000012;margin-bottom:12px}
+.date-panel{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.date-panel h2{margin:0;font-size:17px}
+.btn-edit-date{background:#ed8936;color:#fff;padding:6px 12px;font-size:13px}
+
+h2{font-size:16px;margin-bottom:12px}
+.input-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+input{padding:8px 10px;border:1px solid #d0d7e3;border-radius:6px;font-size:14px;width:100%}
+.cat-input{width:100px}
+.time-input{width:120px}
+.task-name{flex:1;min-width:140px}
+button{padding:8px 14px;border:none;border-radius:6px;cursor:pointer;font-size:14px}
+.btn-add{background:#2b7bdd;color:#fff}
+.btn-save{background:#2f855a;color:#fff}
+.btn-clear{background:#e53e3e;color:#fff}
+.btn-excel{background:#217346;color:#fff}
+.btn-backup{background:#805ad5;color:#fff}
+.tip{font-size:12px;color:#666;margin-top:6px;line-height:1.5}
+.insert-tip{background:#ebf8ff;color:#2b6cb0;padding:8px 10px;border-radius:6px;font-size:13px;margin-bottom:8px;display:none}
+.oper-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+table{width:100%;border-collapse:collapse;margin-top:10px;display:block;overflow-x:auto}
+th,td{border:1px solid #e2e8f0;padding:8px;font-size:13px;text-align:left;white-space:nowrap}
+th{background:#f7fafc;font-weight:600}
+
+/* 分类底色 */
+.cat-0{background:#ebf8ff}
+.cat-1{background:#f0fff4}
+.cat-2{background:#fffaf0}
+.cat-3{background:#faf5ff}
+
+/* 冲突标红 */
+.tr-conflict{background:#fed7d7 !important;color:#9b2c2c}
+.del-btn,.edit-btn{padding:4px 8px;font-size:12px;border-radius:4px;color:white}
+.del-btn{background:#e53e3e;margin-left:4px}
+.edit-btn{background:#3182ce}
+#fileInput{display:none}
+
+@media(max-width:640px){
+    .cat-input{width:100%}
+    .time-input{width:calc(50% - 4px)}
+    th,td{padding:6px 4px;font-size:12px}
+    button{padding:8px 12px;font-size:13px}
+    .date-panel h2{font-size:15px}
+}
+</style>
+</head>
+<body>
+<div class="panel date-panel">
+    <h2 id="dateTitle">天平时间整理</h2>
+    <button class="btn-edit-date" onclick="changeDate()">修改日期</button>
+</div>
+
+<div class="panel">
+    <h2>新增/编辑时段</h2>
+    <div class="input-row">
+        <input class="cat-input" id="taskCat" placeholder="分类/人员（可选）">
+        <input class="time-input" id="startTime" placeholder="开始 例：85030">
+        <input class="time-input" id="endTime" placeholder="结束 例：173000">
+    </div>
+    <div class="input-row">
+        <input class="task-name" id="taskName" placeholder="工作内容/事项名称（可选）">
+        <button class="btn-add" id="submitBtn" onclick="submitItem()">添加（自动排序）</button>
+    </div>
+    <div class="insert-tip" id="insertTip"></div>
+    <div class="tip">
+        输入规则：支持 5→05:00:00 / 850→08:50:00 / 85030→08:50:30 / 14:30:25<br>
+        结束时间早于开始时间自动判定为次日；时段冲突自动标红提醒
+    </div>
+</div>
+
+<div class="panel">
+    <h2>时段列表（自动排序）</h2>
+    <div class="oper-row">
+        <button class="btn-clear" onclick="clearAll()">清空全部</button>
+        <button class="btn-excel" onclick="exportExcel()">导出 Excel</button>
+        <button class="btn-backup" onclick="exportJson()">导出备份</button>
+        <button class="btn-backup" onclick="document.getElementById('fileInput').click()">导入备份</button>
+        <input type="file" id="fileInput" accept=".json" onchange="importJson(event)">
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>分类</th><th>工作事项</th><th>开始时间</th><th>结束时间</th><th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+</div>
+
+<script>
+// ========== 全局状态 ==========
+let taskList = [];
+let editIndex = -1;
+let catColorMap = {};
+let colorSeq = 0;
+let currentWorkDate = "";
+
+// ========== 自动保存与恢复 ==========
+const STORAGE_KEY = "tianping_organizer_state";
+
+function saveFullState(){
+    const state = {
+        taskList: taskList,
+        editIndex: editIndex,
+        catColorMap: catColorMap,
+        colorSeq: colorSeq,
+        currentWorkDate: currentWorkDate,
+        taskCat: document.getElementById("taskCat").value,
+        taskName: document.getElementById("taskName").value,
+        startTime: document.getElementById("startTime").value,
+        endTime: document.getElementById("endTime").value,
+        submitBtnText: document.getElementById("submitBtn").textContent,
+        submitBtnClass: document.getElementById("submitBtn").className
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+let saveTimeout;
+function debouncedSave(){
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(saveFullState, 300);
+}
+
+function loadFullState(){
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if(!saved) return false;
+    try{
+        const state = JSON.parse(saved);
+        taskList = state.taskList || [];
+        editIndex = state.editIndex || -1;
+        catColorMap = state.catColorMap || {};
+        colorSeq = state.colorSeq || 0;
+        currentWorkDate = state.currentWorkDate || getTodayStr();
+        document.getElementById("taskCat").value = state.taskCat || "";
+        document.getElementById("taskName").value = state.taskName || "";
+        document.getElementById("startTime").value = state.startTime || "";
+        document.getElementById("endTime").value = state.endTime || "";
+        document.getElementById("submitBtn").textContent = state.submitBtnText || "添加（自动排序）";
+        document.getElementById("submitBtn").className = state.submitBtnClass || "btn-add";
+        return true;
+    }catch(e){
+        return false;
+    }
+}
+
+function clearStorage(){
+    localStorage.removeItem(STORAGE_KEY);
+}
+
+document.addEventListener("input", debouncedSave);
+document.addEventListener("change", debouncedSave);
+
+// ========== 日期 ==========
+function getTodayStr(){
+    const d = new Date();
+    const pad=n=>String(n).padStart(2,"0");
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+
+function initDate(){
+    const savedDate = localStorage.getItem("workDate");
+    const today = getTodayStr();
+    if(savedDate && savedDate === today){
+        currentWorkDate = savedDate;
+    }else{
+        const input = prompt("请输入今日工作日期", today);
+        currentWorkDate = input && input.trim() ? input.trim() : today;
+        localStorage.setItem("workDate", currentWorkDate);
+    }
+    updateDateTitle();
+}
+
+function changeDate(){
+    const input = prompt("请修改工作日期", currentWorkDate);
+    if(input && input.trim()){
+        currentWorkDate = input.trim();
+        localStorage.setItem("workDate", currentWorkDate);
+        updateDateTitle();
+        saveFullState();
+    }
+}
+
+function updateDateTitle(){
+    document.getElementById("dateTitle").textContent = `天平时间整理 - ${currentWorkDate}`;
+}
+
+// ========== 时间解析（支持秒） ==========
+function parseTimeInput(str){
+    str = String(str).trim().replace(/[.．：]/g,":");
+    // 纯数字
+    if(/^\d{1,6}$/.test(str)){
+        let num = parseInt(str);
+        let h,m,s=0;
+        if(num < 100){ // 1-2位：小时
+            h = num; m = 0;
+        }else if(num < 10000){ // 3-4位：小时+分钟
+            h = Math.floor(num / 100);
+            m = num % 100;
+        }else{ // 5-6位：小时+分钟+秒
+            h = Math.floor(num / 10000);
+            m = Math.floor((num % 10000) / 100);
+            s = num % 100;
+        }
+        return buildValidTime(h,m,s);
+    }
+    // 带分隔符
+    if(/^\d{1,2}:\d{1,2}(:\d{1,2})?$/.test(str)){
+        const parts = str.split(":").map(Number);
+        const h=parts[0], m=parts[1], s=parts[2]||0;
+        return buildValidTime(h,m,s);
+    }
+    return null;
+}
+
+function buildValidTime(h,m,s){
+    if(isNaN(h)||isNaN(m)||isNaN(s)) return null;
+    h = Math.max(0,Math.min(23,h));
+    m = Math.max(0,Math.min(59,m));
+    s = Math.max(0,Math.min(59,s));
+    const pad=n=>String(n).padStart(2,"0");
+    return `${pad(h)}:${pad(m)}:${pad(s)}`;
+}
+
+// 时间转秒数
+function timeToSec(timeStr){
+    const [h,m,s] = timeStr.split(":").map(Number);
+    return h*3600 + m*60 + s;
+}
+
+// 跨日判定
+function isCrossDay(start,end){
+    return timeToSec(end) <= timeToSec(start);
+}
+
+// 冲突检测（秒级）
+function checkConflict(list){
+    let conflictSet = new Set();
+    for(let i=0;i<list.length;i++){
+        const aS = timeToSec(list[i].start);
+        let aE = timeToSec(list[i].end);
+        if(aE <= aS) aE += 24*3600;
+        for(let j=i+1;j<list.length;j++){
+            const bS = timeToSec(list[j].start);
+            let bE = timeToSec(list[j].end);
+            if(bE <= bS) bE += 24*3600;
+            if(!(aE <= bS || bE <= aS)){
+                conflictSet.add(i);
+                conflictSet.add(j);
+            }
+        }
+    }
+    return conflictSet;
+}
+
+// 分类底色
+function getCatClass(cat){
+    if(!(cat in catColorMap)){
+        catColorMap[cat] = `cat-${colorSeq % 4}`;
+        colorSeq++;
+    }
+    return catColorMap[cat];
+}
+
+// 插入位置
+function calcInsertPosition(startTimeStr){
+    const targetSec = timeToSec(startTimeStr);
+    for(let i=0;i<taskList.length;i++){
+        if(targetSec < timeToSec(taskList[i].start)){
+            return i;
+        }
+    }
+    return taskList.length;
+}
+
+// 实时插入建议
+document.getElementById("startTime").addEventListener("input",function(){
+    const val = this.value.trim();
+    const tip = document.getElementById("insertTip");
+    if(!val || taskList.length===0){ tip.style.display = "none"; return; }
+    const t = parseTimeInput(val);
+    if(!t){ tip.style.display = "none"; return; }
+    const pos = calcInsertPosition(t);
+    tip.style.display = "block";
+    if(pos === 0){
+        tip.textContent = `建议插入在最前面，作为第1条`;
+    }else if(pos === taskList.length){
+        tip.textContent = `建议插入在最后，作为第${taskList.length+1}条`;
+    }else{
+        const prevName = taskList[pos-1].name || "未命名事项";
+        const nextName = taskList[pos].name || "未命名事项";
+        tip.textContent = `建议插入在第${pos}条「${prevName}」和第${pos+1}条「${nextName}」之间`;
+    }
+});
+
+// 失焦自动格式化
+document.getElementById("startTime").addEventListener("blur",function(){
+    const t = parseTimeInput(this.value);
+    if(t) this.value = t;
+    saveFullState();
+});
+document.getElementById("endTime").addEventListener("blur",function(){
+    const t = parseTimeInput(this.value);
+    if(t) this.value = t;
+    saveFullState();
+});
+
+// ========== 渲染 ==========
+function render(){
+    taskList.sort((a,b)=> timeToSec(a.start) - timeToSec(b.start));
+    const tbody = document.getElementById("tableBody");
+    tbody.innerHTML = "";
+    const conflictIndex = checkConflict(taskList);
+
+    taskList.forEach((item,idx)=>{
+        const tr = document.createElement("tr");
+        tr.classList.add(getCatClass(item.cat));
+        if(conflictIndex.has(idx)) tr.classList.add("tr-conflict");
+        
+        const endShow = isCrossDay(item.start,item.end) 
+            ? `${item.end}（次日）` 
+            : item.end;
+        const nameShow = item.name || "—";
+
+        tr.innerHTML = `
+            <td><strong>${item.cat}</strong></td>
+            <td>${nameShow}</td>
+            <td>${item.start}</td>
+            <td>${endShow}</td>
+            <td>
+                <button class="edit-btn" onclick="editItem(${idx})">编辑</button>
+                <button class="del-btn" onclick="delItem(${idx})">删除</button>
+            </td>
+        `
+        tbody.appendChild(tr);
+    })
+    saveFullState();
+}
+
+// ========== 提交 ==========
+function submitItem(){
+    const cat = document.getElementById("taskCat").value.trim() || "默认";
+    const name = document.getElementById("taskName").value.trim();
+    const rawStart = document.getElementById("startTime").value.trim();
+    const rawEnd = document.getElementById("endTime").value.trim();
+
+    const startTime = parseTimeInput(rawStart);
+    const endTime = parseTimeInput(rawEnd);
+    if(!startTime){alert("开始时间格式无法识别");return}
+    if(!endTime){alert("结束时间格式无法识别");return}
+    if(startTime === endTime){alert("开始和结束时间不能相同");return}
+
+    const newItem = {cat,name,start:startTime,end:endTime};
+
+    const tempList = [...taskList];
+    if(editIndex === -1){
+        tempList.push(newItem);
+    }else{
+        tempList[editIndex] = newItem;
+    }
+    const hasConflict = checkConflict(tempList).size > 0;
+    if(hasConflict){
+        if(!confirm("检测到时间段存在冲突，是否继续添加？")) return;
+    }
+
+    if(editIndex === -1){
+        taskList.push(newItem);
+    }else{
+        if(taskList[editIndex]){
+            taskList[editIndex] = newItem;
+        } else {
+            taskList.push(newItem);
+        }
+        editIndex = -1;
+        document.getElementById("submitBtn").textContent = "添加（自动排序）";
+        document.getElementById("submitBtn").className = "btn-add";
+    }
+
+    document.getElementById("taskCat").value = "";
+    document.getElementById("taskName").value = "";
+    document.getElementById("startTime").value = "";
+    document.getElementById("endTime").value = "";
+    document.getElementById("insertTip").style.display = "none";
+    render();
+}
+
+function editItem(index){
+    const item = taskList[index];
+    if(!item) return;
+    document.getElementById("taskCat").value = item.cat === "默认" ? "" : item.cat;
+    document.getElementById("taskName").value = item.name;
+    document.getElementById("startTime").value = item.start;
+    document.getElementById("endTime").value = item.end;
+    editIndex = index;
+    document.getElementById("submitBtn").textContent = "保存修改";
+    document.getElementById("submitBtn").className = "btn-save";
+    window.scrollTo({top:0,behavior:"smooth"});
+    saveFullState();
+}
+
+function delItem(index){
+    if(confirm("确认删除这条记录？")){
+        taskList.splice(index, 1);
+        if(editIndex === index){
+            editIndex = -1;
+            document.getElementById("submitBtn").textContent = "添加（自动排序）";
+            document.getElementById("submitBtn").className = "btn-add";
+        } else if(editIndex > index){
+            editIndex--;
+        }
+        render();
+    }
+}
+
+function clearAll(){
+    if(taskList.length === 0){ alert("暂无数据可清空"); return; }
+    if(confirm("确认清空所有记录？此操作不可恢复")){
+        taskList = [];
+        catColorMap = {};
+        colorSeq = 0;
+        editIndex = -1;
+        document.getElementById("submitBtn").textContent = "添加（自动排序）";
+        document.getElementById("submitBtn").className = "btn-add";
+        render();
+        clearStorage();
+    }
+}
+
+// Excel
+function exportExcel(){
+    if(taskList.length === 0){alert("暂无数据可导出");return}
+    const inputDate = prompt("请确认导出文件的日期", currentWorkDate);
+    if(!inputDate) return;
+    const exportDate = inputDate.trim();
+
+    let html = `<table border="1">
+        <tr><th colspan="4" style="font-size:16px;text-align:center;padding:10px">天平时间整理 - ${exportDate}</th></tr>
+        <tr><th>分类</th><th>工作事项</th><th>开始时间</th><th>结束时间</th></tr>`;
+    taskList.forEach(t=>{
+        const endShow = isCrossDay(t.start,t.end) ? `${t.end}（次日）` : t.end;
+        const nameShow = t.name || "—";
+        html += `<tr><td>${t.cat}</td><td>${nameShow}</td><td>${t.start}</td><td>${endShow}</td></tr>`
+    })
+    html += `</table>`;
+    const blob = new Blob(['\ufeff' + html], {type:'application/vnd.ms-excel'});
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `天平时间整理_${exportDate}.xls`;
+    link.click();
+}
+
+// 备份
+function exportJson(){
+    if(taskList.length === 0){alert("暂无数据可备份");return}
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(taskList,null,2));
+    const link = document.createElement('a');
+    link.href = dataStr;
+    link.download = `天平时间备份_${currentWorkDate}.json`;
+    link.click();
+}
+
+function importJson(event){
+    const file = event.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e){
+        try{
+            const data = JSON.parse(e.target.result);
+            if(!Array.isArray(data)) throw new Error();
+            if(confirm("导入后会合并到当前列表并自动排序，是否继续？")){
+                taskList = [...taskList, ...data];
+                render();
+                alert("导入成功，已自动排序");
+            }
+        }catch{
+            alert("文件格式错误，导入失败");
+        }
+    }
+    reader.readAsText(file);
+    event.target.value = "";
+}
+
+// 初始化
+function initPage(){
+    const restored = loadFullState();
+    if(!restored){
+        initDate();
+    } else {
+        updateDateTitle();
+    }
+    render();
+}
+
+window.onload = initPage;
+</script>
+</body>
+</html>

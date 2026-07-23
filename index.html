@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>化验计算器合集</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f5f6f7; color: #333; display: flex; flex-direction: column; height: 100vh; }
+    .nav-bar { background: #fff; padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .nav-btn { padding: 8px 12px; border: none; border-radius: 6px; background: #e4e7ed; color: #606266; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .nav-btn.active { background: #4080ff; color: #fff; }
+    .iframe-container { flex: 1; position: relative; overflow: hidden; }
+    iframe { width: 100%; height: 100%; border: none; display: none; background: #fff; }
+    iframe.active { display: block; }
+    @media (max-width: 480px) {
+      .nav-btn { padding: 6px 10px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="nav-bar" id="navBar">
+    <button class="nav-btn active" data-page="page1.html">反应液/回收液</button>
+    <button class="nav-btn" data-page="page2.html">吡啶</button>
+    <button class="nav-btn" data-page="page3.html">液碱/咪唑/969/甲酸</button>
+    <button class="nav-btn" data-page="page4.html">比旋度/偏差</button>
+    <button class="nav-btn" data-page="page5.html">含量计算</button>
+    <button class="nav-btn" data-page="page6.html">干燥/炽灼/平衡</button>
+    <button class="nav-btn" data-page="page7.html">天平时间整理</button>
+  </div>
+
+  <div class="iframe-container">
+    <iframe id="iframe1" class="active" src="page1.html" allow="local-storage"></iframe>
+  </div>
+
+  <script>
+    const navBar = document.getElementById('navBar');
+    const container = document.querySelector('.iframe-container');
+    const buttons = document.querySelectorAll('.nav-btn');
+
+    function switchPage(page) {
+      const activeIframe = container.querySelector('iframe.active');
+      if (activeIframe) activeIframe.classList.remove('active');
+
+      let targetIframe = container.querySelector(`iframe[src="${page}"]`);
+      if (!targetIframe) {
+        targetIframe = document.createElement('iframe');
+        targetIframe.src = page;
+        targetIframe.setAttribute('allow', 'local-storage');
+        container.appendChild(targetIframe);
+      }
+      targetIframe.classList.add('active');
+
+      buttons.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.page === page);
+      });
+    }
+
+    navBar.addEventListener('click', (e) => {
+      if (e.target.classList.contains('nav-btn')) {
+        switchPage(e.target.dataset.page);
+      }
+    });
+  </script>
+</body>
+</html>

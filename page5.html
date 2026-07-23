@@ -1,0 +1,437 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>含量计算</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { padding: 10px; background: #fff; color: #333; font-size: 14px; }
+    .container { max-width: 1300px; margin: 0 auto; }
+    .main-title { font-size: 18px; font-weight: 600; margin-bottom: 12px; text-align: center; }
+    .calc-card { background: #fff; border-radius: 10px; padding: 12px; margin-bottom: 10px; border-left: 4px solid #4080ff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .calc-card.s2 { border-left-color: #67c23a; }
+    .calc-card.s3 { border-left-color: #e6a23c; }
+    .stage-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .clear-btn { font-size: 12px; color: #909399; cursor: pointer; font-weight: normal; }
+    .input-label { font-size: 11px; color: #909399; margin-bottom: 2px; }
+    .input-group { display: flex; flex-direction: column; }
+    input, select { width: 100%; padding: 6px 8px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 13px; background: #fff; }
+    input:focus, select:focus { outline: none; border-color: #4080ff; }
+    input:disabled, select:disabled { background: #f4f4f5; color: #909399; }
+    .input-row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+    .input-row-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
+    .formula-box { background: #f0f9ff; padding: 8px 12px; border-radius: 4px; font-size: 12px; color: #4080ff; margin: 8px 0; }
+    button { padding: 8px 14px; border: none; border-radius: 6px; background: #4080ff; color: white; font-size: 13px; cursor: pointer; }
+    .btn-clear { background: #909399; }
+    .btn-bar { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; align-items: center; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; table-layout: auto; }
+    th, td { border: 1px solid #ebeef5; padding: 4px 6px; text-align: center; color: #606266; white-space: nowrap; }
+    th { background: #f5f7fa; font-weight: 500; color: #303133; font-size: 12px; }
+    table input { padding: 3px 4px; font-size: 12px; width: 100%; border: none; text-align: center; background: transparent; min-width: 60px; }
+    table input:focus { background: #fafafa; }
+    .result-green { color: #67c23a; font-weight: 600; }
+    .result-red { color: #f56c6c; font-weight: 600; }
+    .result-line { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #f4f7fa; border-radius: 4px; margin-top: 8px; font-size: 13px; }
+    .merged-cell { vertical-align: middle; font-weight: 500; }
+    #other-conc-group { display: none; }
+  </style>
+</head>
+<body>
+<div class="container" id="main-container">
+  <div class="main-title">含量计算</div>
+
+  <!-- 高氯酸浓度校正 -->
+  <div class="calc-card">
+    <div class="stage-title"><span>高氯酸浓度校正</span></div>
+    <div class="formula-box">校正浓度 = 标定浓度 / [1 + 0.0011 × (室温 − 标定温度)]</div>
+    <div class="input-row-3">
+      <div class="input-group">
+        <div class="input-label">标定浓度 (mol/L)</div>
+        <input step="0.0001" id="calib-conc" value="0.1033" onfocus="this.dataset.prev=this.value" onblur="if(this.value!==this.dataset.prev && !confirm('确定修改标定浓度？')){this.value=this.dataset.prev} else {updateCorrConc();}">
+      </div>
+      <div class="input-group">
+        <div class="input-label">标定温度 (℃)</div>
+        <input step="0.1" id="calib-temp" value="24.5" onfocus="this.dataset.prev=this.value" onblur="if(this.value!==this.dataset.prev && !confirm('确定修改标定温度？')){this.value=this.dataset.prev} else {updateCorrConc();}">
+      </div>
+      <div class="input-group">
+        <div class="input-label">室温 (℃)</div>
+        <input step="0.1" id="room-temp" value="26.5" oninput="updateCorrConc()">
+      </div>
+    </div>
+    <div class="result-line">
+      <span class="label">校正后浓度</span>
+      <span class="val result-green" id="corr-conc-display">0.1031</span>
+    </div>
+  </div>
+
+  <!-- 滴定参数设置 -->
+  <div class="calc-card s2">
+    <div class="stage-title">滴定参数</div>
+    <div class="input-row-4">
+      <div class="input-group">
+        <div class="input-label">滴定液类型</div>
+        <select id="titrant-type" onchange="onTitrantChange()">
+          <option value="hclo4" selected>高氯酸（校正浓度链接）</option>
+          <option value="other">其他（手动输入浓度）</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <div class="input-label">滴定模式</div>
+        <select id="titration-mode" onchange="onModeChange()">
+          <option value="potentio" selected>电位滴定（4位小数）</option>
+          <option value="manual">手动滴定（2位小数）</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <div class="input-label">常数</div>
+        <input id="constant-k" value="1" step="0.0001" oninput="calcAll()">
+      </div>
+      <div class="input-group">
+        <div class="input-label">空白 (mL)</div>
+        <input id="global-blank" value="0" step="0.0001" oninput="calcAll()">
+      </div>
+    </div>
+    <div class="input-group" id="other-conc-group">
+      <div class="input-label">其他滴定液浓度 (mol/L)</div>
+      <input id="other-conc" step="0.0001" value="0.1000" oninput="syncOtherConc()">
+    </div>
+  </div>
+
+  <!-- 样品表格 -->
+  <div class="calc-card s3">
+    <div class="stage-title">
+      <span>样品测定</span>
+      <div>
+        <button onclick="addGroup()" style="margin-right:5px;">➕ 新增一组</button>
+        <button class="btn-clear" onclick="clearAll()">清空全部</button>
+      </div>
+    </div>
+    <table id="sample-table">
+      <thead>
+        <tr>
+          <th style="width:50px;">组</th><th style="width:40px;">样</th><th style="width:90px;">样重 (g)</th><th style="width:110px;">消耗体积 (mL)</th>
+          <th style="width:85px;">校正浓度</th><th style="width:85px;">干燥失重 (%)</th><th style="width:95px;">原始结果</th>
+          <th style="width:85px;">含量 (%)</th><th style="width:85px;">平均值 (%)</th><th style="width:95px;">相对偏差 (%)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  // ========== 精确银行家舍入 ==========
+  function roundBanker(num, places) {
+    if (isNaN(num) || num === null || num === '') return '';
+    let str = Number(num).toFixed(places + 10);
+    let [intPart, decPart] = str.split('.');
+    if (!decPart || decPart.length <= places) return Number(num).toFixed(places);
+    let keep = decPart.substring(0, places);
+    let next = decPart[places];
+    let afterNext = decPart.substring(places + 1);
+    let carry = 0;
+    if (next > '5') carry = 1;
+    else if (next === '5') {
+      if (/[1-9]/.test(afterNext)) carry = 1;
+      else {
+        let lastKeep = keep[keep.length - 1];
+        if (parseInt(lastKeep) % 2 === 1) carry = 1;
+      }
+    }
+    if (carry) {
+      let intKeep = parseInt(keep) + 1;
+      keep = intKeep.toString().padStart(places, '0');
+      if (keep.length > places) {
+        intPart = (parseInt(intPart) + 1).toString();
+        keep = keep.substring(1);
+      }
+    }
+    return intPart + '.' + keep.padEnd(places, '0');
+  }
+
+  // ========== 自动保存与恢复 ==========
+  const STORAGE_KEY = 'page5_content_calc_state';
+
+  function saveState() {
+    const data = {};
+    // 保存所有带id的输入框和选择框
+    document.querySelectorAll('input[id], select[id]').forEach(el => {
+      if (el.type === 'checkbox' || el.type === 'radio') data[el.id] = el.checked;
+      else data[el.id] = el.value;
+    });
+    // 保存动态组数
+    data['groupCount'] = groupCount;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  let saveTimeout;
+  function debouncedSave() {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(saveState, 300);
+  }
+
+  function loadState() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return false;
+    const data = JSON.parse(saved);
+
+    // 恢复顶部参数
+    document.querySelectorAll('input[id], select[id]').forEach(el => {
+      if (el.id.startsWith('weight-') || el.id.startsWith('vol-') || el.id.startsWith('lod-') || el.id.startsWith('conc-')) return; // 表格内的稍后处理
+      if (data[el.id] !== undefined) {
+        if (el.type === 'checkbox' || el.type === 'radio') el.checked = data[el.id];
+        else el.value = data[el.id];
+      }
+    });
+
+    // 重建表格
+    groupCount = data['groupCount'] || 5;
+    const tbody = document.querySelector('#sample-table tbody');
+    tbody.innerHTML = '';
+    const mode = document.getElementById('titration-mode').value;
+    const step = (mode === 'potentio') ? '0.0001' : '0.01';
+    const placeholder = (mode === 'potentio') ? '0.0000' : '0.00';
+
+    for (let g = 1; g <= groupCount; g++) {
+      const row1 = document.createElement('tr');
+      row1.innerHTML = `
+        <td rowspan="2" class="merged-cell">${g}</td>
+        <td>1</td>
+        <td><input class="weight-input" type="number" step="0.0001" oninput="calcAll()" id="weight-${g}-1"></td>
+        <td><input class="vol-input" type="number" step="${step}" placeholder="${placeholder}" onblur="validateVolume(this)" oninput="calcAll()" id="vol-${g}-1"></td>
+        <td rowspan="2" class="conc-display" id="conc-${g}"></td>
+        <td rowspan="2"><input class="lod-input" type="number" step="0.01" value="0" oninput="calcAll()" id="lod-${g}"></td>
+        <td class="raw-result" id="raw-${g}-1"></td>
+        <td class="content-result" id="content-${g}-1"></td>
+        <td rowspan="2" class="avg-result" id="avg-${g}"></td>
+        <td rowspan="2" class="dev-result" id="dev-${g}"></td>
+      `;
+      const row2 = document.createElement('tr');
+      row2.innerHTML = `
+        <td>2</td>
+        <td><input class="weight-input" type="number" step="0.0001" oninput="calcAll()" id="weight-${g}-2"></td>
+        <td><input class="vol-input" type="number" step="${step}" placeholder="${placeholder}" onblur="validateVolume(this)" oninput="calcAll()" id="vol-${g}-2"></td>
+        <td class="raw-result" id="raw-${g}-2"></td>
+        <td class="content-result" id="content-${g}-2"></td>
+      `;
+      tbody.appendChild(row1);
+      tbody.appendChild(row2);
+    }
+
+    // 恢复表格内输入框的值
+    document.querySelectorAll('#sample-table tbody input').forEach(inp => {
+      if (inp.id && data[inp.id] !== undefined) {
+        inp.value = data[inp.id];
+      }
+    });
+
+    // 恢复浓度显示
+    const type = document.getElementById('titrant-type').value;
+    if (type === 'hclo4') {
+      const corr = document.getElementById('corr-conc-display').innerText;
+      document.querySelectorAll('.conc-display').forEach(el => el.innerText = corr || '');
+    } else {
+      const otherConc = document.getElementById('other-conc').value;
+      document.querySelectorAll('.conc-display').forEach(el => el.innerText = otherConc || '');
+      document.getElementById('other-conc-group').style.display = 'block';
+    }
+
+    // 重新计算
+    calcAll();
+    return true;
+  }
+
+  function clearStorage() { localStorage.removeItem(STORAGE_KEY); }
+
+  document.addEventListener('input', debouncedSave);
+  document.addEventListener('change', debouncedSave);
+
+  // 高氯酸校正
+  function updateCorrConc() {
+    const calib = parseFloat(document.getElementById('calib-conc').value) || 0;
+    const tCal = parseFloat(document.getElementById('calib-temp').value) || 0;
+    const tRoom = parseFloat(document.getElementById('room-temp').value) || 0;
+    let corr = 0;
+    if (calib > 0) corr = calib / (1 + 0.0011 * (tRoom - tCal));
+    document.getElementById('corr-conc-display').innerText = corr ? roundBanker(corr, 4) : '';
+    if (document.getElementById('titrant-type').value === 'hclo4') {
+      document.querySelectorAll('.conc-display').forEach(el => {
+        el.innerText = corr ? roundBanker(corr, 4) : '';
+      });
+      calcAll();
+    }
+  }
+
+  // 同步"其他"浓度
+  function syncOtherConc() {
+    const concVal = document.getElementById('other-conc').value;
+    document.querySelectorAll('.conc-display').forEach(el => {
+      el.innerText = concVal;
+    });
+    calcAll();
+  }
+
+  // 滴定液类型切换
+  function onTitrantChange() {
+    const type = document.getElementById('titrant-type').value;
+    const isHClO4 = (type === 'hclo4');
+    const otherGroup = document.getElementById('other-conc-group');
+    otherGroup.style.display = isHClO4 ? 'none' : 'block';
+    if (isHClO4) {
+      updateCorrConc();
+    } else {
+      syncOtherConc();
+    }
+    saveState();
+  }
+
+  // 滴定模式切换
+  function onModeChange() {
+    const mode = document.getElementById('titration-mode').value;
+    const isPotentio = (mode === 'potentio');
+    const step = isPotentio ? '0.0001' : '0.01';
+    const placeholder = isPotentio ? '0.0000' : '0.00';
+    document.querySelectorAll('.vol-input').forEach(inp => {
+      inp.step = step;
+      inp.placeholder = placeholder;
+    });
+    saveState();
+  }
+
+  // 体积验证
+  function validateVolume(input) {
+    const mode = document.getElementById('titration-mode').value;
+    const val = input.value.trim();
+    if (val === '') return;
+    const num = parseFloat(val);
+    if (isNaN(num)) { input.value = ''; return; }
+    const requiredDecimals = (mode === 'potentio') ? 4 : 2;
+    const regex = new RegExp(`^\\d+\\.\\d{${requiredDecimals}}$`);
+    if (!regex.test(val)) {
+      alert(`当前滴定模式要求${requiredDecimals}位小数！已清空`);
+      input.value = '';
+    }
+    calcAll();
+  }
+
+  // 添加一组
+  let groupCount = 0;
+  function addGroup() {
+    groupCount++;
+    const tbody = document.querySelector('#sample-table tbody');
+    const isHClO4 = document.getElementById('titrant-type').value === 'hclo4';
+    const concVal = isHClO4 ? document.getElementById('corr-conc-display').innerText : document.getElementById('other-conc').value;
+    const mode = document.getElementById('titration-mode').value;
+    const step = mode === 'potentio' ? '0.0001' : '0.01';
+    const placeholder = mode === 'potentio' ? '0.0000' : '0.00';
+
+    const row1 = document.createElement('tr');
+    row1.innerHTML = `
+      <td rowspan="2" class="merged-cell">${groupCount}</td>
+      <td>1</td>
+      <td><input class="weight-input" type="number" step="0.0001" oninput="calcAll()" id="weight-${groupCount}-1"></td>
+      <td><input class="vol-input" type="number" step="${step}" placeholder="${placeholder}" onblur="validateVolume(this)" oninput="calcAll()" id="vol-${groupCount}-1"></td>
+      <td rowspan="2" class="conc-display" id="conc-${groupCount}">${concVal}</td>
+      <td rowspan="2"><input class="lod-input" type="number" step="0.01" value="0" oninput="calcAll()" id="lod-${groupCount}"></td>
+      <td class="raw-result" id="raw-${groupCount}-1"></td>
+      <td class="content-result" id="content-${groupCount}-1"></td>
+      <td rowspan="2" class="avg-result" id="avg-${groupCount}"></td>
+      <td rowspan="2" class="dev-result" id="dev-${groupCount}"></td>
+    `;
+    const row2 = document.createElement('tr');
+    row2.innerHTML = `
+      <td>2</td>
+      <td><input class="weight-input" type="number" step="0.0001" oninput="calcAll()" id="weight-${groupCount}-2"></td>
+      <td><input class="vol-input" type="number" step="${step}" placeholder="${placeholder}" onblur="validateVolume(this)" oninput="calcAll()" id="vol-${groupCount}-2"></td>
+      <td class="raw-result" id="raw-${groupCount}-2"></td>
+      <td class="content-result" id="content-${groupCount}-2"></td>
+    `;
+    tbody.appendChild(row1);
+    tbody.appendChild(row2);
+    calcAll();
+    saveState();
+  }
+
+  // 计算
+  function calcAll() {
+    const constantK = parseFloat(document.getElementById('constant-k').value) || 0;
+    const globalBlank = parseFloat(document.getElementById('global-blank').value) || 0;
+    const rows = document.querySelectorAll('#sample-table tbody tr');
+    for (let i = 0; i < rows.length; i += 2) {
+      const row1 = rows[i];
+      const row2 = rows[i+1];
+      if (!row2) continue;
+
+      const getVal = (row, cls) => parseFloat(row.querySelector('.' + cls)?.value) || 0;
+      const w1 = getVal(row1, 'weight-input');
+      const vol1 = getVal(row1, 'vol-input');
+      const w2 = getVal(row2, 'weight-input');
+      const vol2 = getVal(row2, 'vol-input');
+
+      const lod = parseFloat(row1.querySelector('.lod-input')?.value) || 0;
+      const conc = parseFloat(row1.querySelector('.conc-display')?.innerText) || 0;
+
+      const raw1 = row1.querySelector('.raw-result');
+      const raw2 = row2.querySelector('.raw-result');
+      const cont1 = row1.querySelector('.content-result');
+      const cont2 = row2.querySelector('.content-result');
+      const avgCell = row1.querySelector('.avg-result');
+      const devCell = row1.querySelector('.dev-result');
+
+      const calcContent = (w, v) => {
+        if (w <= 0 || conc <= 0 || v <= 0) return NaN;
+        const factor = 1 - lod / 100;
+        if (factor <= 0) return NaN;
+        return (v - globalBlank) * conc * constantK * 100 / (w * factor);
+      };
+
+      const c1 = calcContent(w1, vol1);
+      const c2 = calcContent(w2, vol2);
+
+      raw1.innerText = isNaN(c1) ? '' : c1.toFixed(5);
+      raw2.innerText = isNaN(c2) ? '' : c2.toFixed(5);
+      const r1 = isNaN(c1) ? null : Number(roundBanker(c1, 2));
+      const r2 = isNaN(c2) ? null : Number(roundBanker(c2, 2));
+      cont1.innerText = r1 !== null ? r1.toFixed(2) : '';
+      cont2.innerText = r2 !== null ? r2.toFixed(2) : '';
+
+      if (r1 !== null && r2 !== null && r1 > 0 && r2 > 0) {
+        const avg = (r1 + r2) / 2;
+        const maxVal = Math.max(r1, r2);
+        const dev = (maxVal - avg) / avg * 100;
+        avgCell.innerText = roundBanker(avg, 2);
+        const devStr = roundBanker(dev, 2);
+        devCell.innerText = devStr + '%';
+        devCell.style.color = dev >= 0.2 ? '#f56c6c' : '#67c23a';
+        devCell.style.fontWeight = dev >= 0.2 ? '600' : 'normal';
+      } else {
+        avgCell.innerText = '';
+        devCell.innerText = '';
+        devCell.style.color = '#606266';
+      }
+    }
+  }
+
+  function clearAll() {
+    groupCount = 0;
+    document.querySelector('#sample-table tbody').innerHTML = '';
+    for (let i = 0; i < 5; i++) addGroup();
+    updateCorrConc();
+    calcAll();
+    clearStorage();
+    saveState();
+  }
+
+  window.onload = function() {
+    if (!loadState()) {
+      // 首次加载，默认5组
+      groupCount = 0;
+      for (let i = 0; i < 5; i++) addGroup();
+      updateCorrConc();
+      calcAll();
+    }
+  };
+</script>
+</body>
+</html>

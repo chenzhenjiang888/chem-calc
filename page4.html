@@ -1,0 +1,390 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>比旋度 / 相对偏差计算</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { padding: 10px; background: #fff; color: #333; font-size: 14px; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .main-title { font-size: 18px; font-weight: 600; margin-bottom: 12px; text-align: center; }
+    .calc-card { background: #fff; border-radius: 10px; padding: 12px; margin-bottom: 10px; border-left: 4px solid #4080ff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .calc-card.s2 { border-left-color: #f56c6c; }
+    .stage-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #303133; display: flex; justify-content: space-between; align-items: center; }
+    .clear-btn { font-size: 12px; color: #909399; cursor: pointer; font-weight: normal; }
+    .input-label { font-size: 11px; color: #909399; margin-bottom: 2px; }
+    .input-group { display: flex; flex-direction: column; }
+    input { width: 100%; padding: 5px 8px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 13px; background: #fff; }
+    input:focus { outline: none; border-color: #4080ff; }
+    .param-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+    .formula-note { font-size: 12px; color: #909399; margin-bottom: 8px; line-height: 1.6; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; table-layout: auto; }
+    th, td { border: 1px solid #ebeef5; padding: 5px 4px; text-align: center; color: #606266; white-space: nowrap; }
+    th { background: #f5f7fa; font-weight: 500; color: #303133; }
+    table input { padding: 4px 6px; font-size: 12px; width: 100%; border: none; background: transparent; text-align: center; min-width: 70px; }
+    table input:focus { background: #fafafa; }
+    button { padding: 6px 12px; border: none; border-radius: 5px; background: #4080ff; color: white; font-size: 13px; cursor: pointer; }
+    .btn-clear { background: #909399; }
+    .btn-bar { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; align-items: center; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="main-title">比旋度 / 相对偏差计算</div>
+
+  <!-- 比旋度 -->
+  <div class="calc-card">
+    <div class="stage-title">
+      <span>比旋度计算</span>
+      <span class="clear-btn" onclick="clearPolar()">清空表格</span>
+    </div>
+    <div class="formula-note">
+      <strong>公式：</strong><br>
+      比旋度 = (旋光读数 − 空白) × 体积 / [样重 × 管长 × (1 − 干燥失重% / 100 − 溶残ppm × 0.0001 / 100)]<br>
+      <strong>反推：</strong> 旋光读数 = 比旋度 × 样重 × 管长 × (1 − 干燥失重% / 100 − 溶残ppm × 0.0001 / 100) / 体积 + 空白<br>
+      <strong>换算说明：</strong> 干燥失重输入 3.255 表示 3.255%；溶残输入 223 表示 223 ppm (1ppm = 0.0001%)<br>
+      <strong style="color:#f56c6c;">注意：旋光读数及空白必须为三位小数，否则无法计算。</strong>
+    </div>
+    <div class="param-row">
+      <div class="input-group">
+        <div class="input-label">旋光管长度 (dm)</div>
+        <input id="polar-len" value="1" step="0.1" oninput="calcAllPolar()">
+      </div>
+      <div class="input-group">
+        <div class="input-label">定容体积 (mL)</div>
+        <input id="polar-vol" value="50" step="1" oninput="calcAllPolar()">
+      </div>
+      <div class="input-group">
+        <div class="input-label">干燥失重 (%)</div>
+        <input id="polar-lod" value="0" step="0.001" oninput="calcAllPolar()">
+      </div>
+      <div class="input-group">
+        <div class="input-label">溶残 (ppm)</div>
+        <input id="polar-residue" value="0" step="1" oninput="calcAllPolar()">
+      </div>
+    </div>
+    <table id="polar-table">
+      <thead>
+        <tr>
+          <th style="width:8%">序号</th>
+          <th style="width:18%">样重 (g)</th>
+          <th style="width:18%">空白 (3位小数)</th>
+          <th style="width:28%">旋光读数 / 比旋度</th>
+          <th style="width:28%">计算结果</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div class="btn-bar">
+      <button onclick="addPolarRow()">➕ 新增行</button>
+    </div>
+  </div>
+
+  <!-- 相对偏差 -->
+  <div class="calc-card s2">
+    <div class="stage-title">
+      <span>相对偏差计算</span>
+      <span class="clear-btn" onclick="clearDev()">清空表格</span>
+    </div>
+    <table id="dev-table">
+      <thead>
+        <tr><th style="width:8%">序号</th><th style="width:28%">数据1</th><th style="width:28%">数据2</th><th style="width:18%">平均值</th><th style="width:18%">相对偏差 (%)</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div class="btn-bar">
+      <button onclick="addDevRow()">➕ 新增行</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ========== 精确银行家舍入 ==========
+  function roundBanker(num, places) {
+    if (isNaN(num) || num === null || num === '') return '';
+    let str = Number(num).toFixed(places + 10);
+    let [intPart, decPart] = str.split('.');
+    if (!decPart || decPart.length <= places) return Number(num).toFixed(places);
+    let keep = decPart.substring(0, places);
+    let next = decPart[places];
+    let afterNext = decPart.substring(places + 1);
+    let carry = 0;
+    if (next > '5') carry = 1;
+    else if (next === '5') {
+      if (/[1-9]/.test(afterNext)) carry = 1;
+      else {
+        let lastKeep = keep[keep.length - 1];
+        if (parseInt(lastKeep) % 2 === 1) carry = 1;
+      }
+    }
+    if (carry) {
+      let intKeep = parseInt(keep) + 1;
+      keep = intKeep.toString().padStart(places, '0');
+      if (keep.length > places) {
+        intPart = (parseInt(intPart) + 1).toString();
+        keep = keep.substring(1);
+      }
+    }
+    return intPart + '.' + keep.padEnd(places, '0');
+  }
+
+  // ========== 自动保存与恢复 ==========
+  const STORAGE_KEY = 'page4_polar_dev_state';
+
+  function saveState() {
+    const data = {};
+    // 保存所有输入框的值
+    document.querySelectorAll('input[id]').forEach(el => {
+      if (el.type === 'checkbox' || el.type === 'radio') data[el.id] = el.checked;
+      else data[el.id] = el.value;
+    });
+    // 保存动态行数
+    data['polarRowCount'] = polarRowCount;
+    data['devRowCount'] = devRowCount;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  let saveTimeout;
+  function debouncedSave() {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(saveState, 300);
+  }
+
+  function loadState() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return false;
+    const data = JSON.parse(saved);
+
+    // 恢复动态行数并重建表格
+    if (data['polarRowCount']) {
+      polarRowCount = data['polarRowCount'];
+      const polarTbody = document.querySelector('#polar-table tbody');
+      polarTbody.innerHTML = '';
+      for (let i = 1; i <= polarRowCount; i++) {
+        addPolarRowToTable(i);
+      }
+    }
+    if (data['devRowCount']) {
+      devRowCount = data['devRowCount'];
+      const devTbody = document.querySelector('#dev-table tbody');
+      devTbody.innerHTML = '';
+      for (let i = 1; i <= devRowCount; i++) {
+        addDevRowToTable(i);
+      }
+    }
+
+    // 恢复输入框的值
+    document.querySelectorAll('input[id]').forEach(el => {
+      if (data[el.id] !== undefined) {
+        if (el.type === 'checkbox' || el.type === 'radio') el.checked = data[el.id];
+        else el.value = data[el.id];
+      }
+    });
+
+    // 重新计算所有行
+    calcAllPolar();
+    for (let i = 1; i <= devRowCount; i++) {
+      calcDevSingle(i);
+    }
+
+    return true;
+  }
+
+  function clearStorage() { localStorage.removeItem(STORAGE_KEY); }
+
+  document.addEventListener('input', debouncedSave);
+  document.addEventListener('change', debouncedSave);
+
+  // ========== 小数位数验证 ==========
+  function checkDecimalPlaces(value, places) {
+    if (value === '' || isNaN(value)) return false;
+    const parts = value.toString().split('.');
+    return parts.length === 2 && parts[1].length === places;
+  }
+
+  // ========== 比旋度计算 ==========
+  let polarRowCount = 3;
+
+  function addPolarRowToTable(index) {
+    const tbody = document.querySelector('#polar-table tbody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${index}</td>
+      <td><input id="pw-${index}" oninput="calcSinglePolar(${index}, 'weight')"></td>
+      <td><input id="pblank-${index}" value="0.000" onblur="validateBlank(${index})"></td>
+      <td>
+        <div style="display:flex; gap:4px;">
+          <input id="pread-${index}" placeholder="三位小数" onblur="validateReading(${index})">
+          <span style="line-height:30px;">/</span>
+          <input id="pspec-${index}" placeholder="比旋度" oninput="calcSinglePolar(${index}, 'specific')">
+        </div>
+      </td>
+      <td id="presult-${index}" style="color:#4080ff; font-weight:600;"></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  function addPolarRow() {
+    polarRowCount++;
+    addPolarRowToTable(polarRowCount);
+    saveState();
+  }
+
+  function validateBlank(index) {
+    const el = document.getElementById('pblank-' + index);
+    if (el.value === '0' || el.value === '0.000') return;
+    if (!checkDecimalPlaces(el.value, 3)) {
+      alert('空白必须为三位小数！已重置为 0.000');
+      el.value = '0.000';
+    }
+    calcSinglePolar(index, 'blank');
+  }
+
+  function validateReading(index) {
+    const el = document.getElementById('pread-' + index);
+    if (el.value === '') {
+      calcSinglePolar(index, 'reading');
+      return;
+    }
+    if (!checkDecimalPlaces(el.value, 3)) {
+      alert('旋光读数必须为三位小数！已清空');
+      el.value = '';
+    }
+    calcSinglePolar(index, 'reading');
+  }
+
+  function calcSinglePolar(index, source) {
+    const len = Number(document.getElementById('polar-len').value) || 0;
+    const vol = Number(document.getElementById('polar-vol').value) || 0;
+    const lod = Number(document.getElementById('polar-lod').value) || 0;
+    const residue = Number(document.getElementById('polar-residue').value) || 0;
+    const w = Number(document.getElementById('pw-' + index).value) || 0;
+    const blankEl = document.getElementById('pblank-' + index);
+    const readEl = document.getElementById('pread-' + index);
+    const specEl = document.getElementById('pspec-' + index);
+    const resEl = document.getElementById('presult-' + index);
+
+    const blankVal = blankEl.value === '' ? 0 : Number(blankEl.value);
+    const readingVal = readEl.value === '' ? NaN : Number(readEl.value);
+    const specificVal = specEl.value === '' ? NaN : Number(specEl.value);
+
+    if (len <= 0 || vol <= 0 || w <= 0) {
+      resEl.innerText = '';
+      return;
+    }
+
+    const factor = 1 - lod / 100 - residue * 0.0001 / 100;
+    if (factor <= 0) {
+      resEl.innerText = '因子≤0';
+      return;
+    }
+
+    if (source === 'reading' || source === 'blank' || source === 'weight') {
+      if (!isNaN(readingVal) && readingVal !== 0 && checkDecimalPlaces(readEl.value, 3)) {
+        const calcSpec = (readingVal - blankVal) * vol / (w * len * factor);
+        specEl.value = roundBanker(calcSpec, 2);
+        resEl.innerText = '比旋度：' + roundBanker(calcSpec, 2);
+      } else {
+        resEl.innerText = '等待有效读数…';
+      }
+    } else if (source === 'specific') {
+      if (!isNaN(specificVal) && specificVal !== 0) {
+        const calcRead = specificVal * w * len * factor / vol + blankVal;
+        readEl.value = roundBanker(calcRead, 3);
+        resEl.innerText = '旋光读数：' + roundBanker(calcRead, 3);
+      } else {
+        resEl.innerText = '请输入比旋度';
+      }
+    } else {
+      if (!isNaN(readingVal) && readingVal !== 0 && checkDecimalPlaces(readEl.value, 3)) {
+        const calcSpec = (readingVal - blankVal) * vol / (w * len * factor);
+        specEl.value = roundBanker(calcSpec, 2);
+        resEl.innerText = '比旋度：' + roundBanker(calcSpec, 2);
+      } else if (!isNaN(specificVal) && specificVal !== 0) {
+        const calcRead = specificVal * w * len * factor / vol + blankVal;
+        readEl.value = roundBanker(calcRead, 3);
+        resEl.innerText = '旋光读数：' + roundBanker(calcRead, 3);
+      } else {
+        resEl.innerText = '';
+      }
+    }
+  }
+
+  function calcAllPolar() {
+    for (let i = 1; i <= polarRowCount; i++) {
+      calcSinglePolar(i, 'param');
+    }
+  }
+
+  function clearPolar() {
+    document.getElementById('polar-len').value = '1';
+    document.getElementById('polar-vol').value = '50';
+    document.getElementById('polar-lod').value = '0';
+    document.getElementById('polar-residue').value = '0';
+    polarRowCount = 3;
+    document.querySelector('#polar-table tbody').innerHTML = '';
+    for (let i = 1; i <= 3; i++) addPolarRowToTable(i);
+    clearStorage();
+    saveState();
+  }
+
+  // ========== 相对偏差计算 ==========
+  let devRowCount = 3;
+
+  function addDevRowToTable(index) {
+    const tbody = document.querySelector('#dev-table tbody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${index}</td>
+      <td><input id="d1-${index}" oninput="calcDevSingle(${index})"></td>
+      <td><input id="d2-${index}" oninput="calcDevSingle(${index})"></td>
+      <td id="avg-${index}"></td>
+      <td id="dev-${index}"></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  function addDevRow() {
+    devRowCount++;
+    addDevRowToTable(devRowCount);
+    saveState();
+  }
+
+  function calcDevSingle(index) {
+    const d1 = Number(document.getElementById('d1-' + index).value) || 0;
+    const d2 = Number(document.getElementById('d2-' + index).value) || 0;
+    const avgEl = document.getElementById('avg-' + index);
+    const devEl = document.getElementById('dev-' + index);
+    if (d1 > 0 && d2 > 0) {
+      const avg = (d1 + d2) / 2;
+      avgEl.innerText = roundBanker(avg, 2);
+      const dev = Math.abs(d1 - d2) / avg * 100;
+      devEl.innerText = roundBanker(dev, 2) + '%';
+    } else {
+      avgEl.innerText = '';
+      devEl.innerText = '';
+    }
+  }
+
+  function clearDev() {
+    devRowCount = 3;
+    document.querySelector('#dev-table tbody').innerHTML = '';
+    for (let i = 1; i <= 3; i++) addDevRowToTable(i);
+    clearStorage();
+    saveState();
+  }
+
+  // 初始化
+  window.onload = function() {
+    if (!loadState()) {
+      // 默认各3行
+      for (let i = 1; i <= 3; i++) {
+        addPolarRowToTable(i);
+        addDevRowToTable(i);
+      }
+    }
+  };
+</script>
+</body>
+</html>

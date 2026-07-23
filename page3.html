@@ -1,0 +1,610 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>液碱 / 咪唑 / 969 / 甲酸计算</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { padding: 10px; background: #fff; color: #333; font-size: 14px; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .main-title { font-size: 18px; font-weight: 600; margin-bottom: 12px; text-align: center; }
+    .calc-card { background: #fff; border-radius: 10px; padding: 12px; margin-bottom: 10px; border-left: 4px solid #4080ff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .calc-card.s2 { border-left-color: #67c23a; }
+    .calc-card.s3 { border-left-color: #e6a23c; }
+    .calc-card.s4 { border-left-color: #f56c6c; }
+    .stage-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .clear-btn { font-size: 12px; color: #909399; cursor: pointer; font-weight: normal; }
+    .input-label { font-size: 11px; color: #909399; margin-bottom: 2px; }
+    .input-group { display: flex; flex-direction: column; }
+    input, select { width: 100%; padding: 6px 8px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 13px; background: #fff; }
+    input:focus, select:focus { outline: none; border-color: #4080ff; }
+    input:disabled, select:disabled { background: #f4f4f5; color: #909399; }
+    .input-row-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 8px; }
+    .input-row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+    .result-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
+    .result-box { background: #f4f7fa; border-radius: 6px; padding: 10px; text-align: center; }
+    .result-box .label { font-size: 12px; color: #606266; margin-bottom: 4px; }
+    .result-box .val { font-size: 15px; font-weight: 600; color: #4080ff; }
+    .result-box .unit { font-size: 11px; color: #909399; margin-top: 2px; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; }
+    th, td { border: 1px solid #ebeef5; padding: 4px 6px; text-align: center; color: #606266; white-space: nowrap; }
+    th { background: #f5f7fa; font-weight: 500; color: #303133; font-size: 12px; }
+    table input { padding: 3px 4px; font-size: 12px; width: 100%; border: none; text-align: center; background: transparent; min-width: 60px; }
+    table input:focus { background: #fafafa; }
+    button { padding: 8px 14px; border: none; border-radius: 6px; background: #4080ff; color: white; font-size: 13px; cursor: pointer; }
+    .btn-clear { background: #909399; }
+    .btn-bar { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; align-items: center; }
+    .result-line { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #f4f7fa; border-radius: 4px; margin-top: 8px; font-size: 13px; }
+    .result-line .label { color: #606266; white-space: nowrap; }
+    .result-line .val { font-weight: 600; color: #4080ff; }
+    .result-green { color: #67c23a; font-weight: 600; }
+    .const-display { padding: 6px 8px; background: #f4f4f5; border-radius: 4px; font-size: 12px; color: #303133; text-align: center; }
+    .unit-note { font-size: 10px; color: #909399; }
+    .param-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 8px; font-size: 11px; }
+    .param-item { text-align: center; background: #f4f7fa; padding: 4px 6px; border-radius: 4px; }
+    .param-item .plabel { color: #909399; }
+    .param-item .pval { font-weight: 600; color: #4080ff; }
+    .warn-text { color: #f56c6c; font-size: 10px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="main-title">液碱 / 咪唑 / 969 / 甲酸计算</div>
+
+  <!-- 卡式水分标定 -->
+  <div class="calc-card">
+    <div class="stage-title"><span>卡式水分标定</span><span class="clear-btn" onclick="clearKarl()">清空</span></div>
+    <div class="input-row-2">
+      <div class="input-group"><div class="input-label">空白体积 (mL)</div><input type="number" step="0.01" id="karl-blank" value="0.50" oninput="calcKarl()"></div>
+    </div>
+    <table>
+      <thead><tr><th>序号</th><th>水分称重 (g)</th><th>消耗体积 (mL)</th><th>滴定度 (g/mL)</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><input step="0.0001" id="k1-w" value="0.0257" oninput="calcKarl()"></td><td><input step="0.01" id="k1-v" value="5.10" oninput="calcKarl()"></td><td id="k1-t"></td></tr>
+        <tr><td>2</td><td><input step="0.0001" id="k2-w" value="0.0257" oninput="calcKarl()"></td><td><input step="0.01" id="k2-v" value="5.10" oninput="calcKarl()"></td><td id="k2-t"></td></tr>
+        <tr><td>3</td><td><input step="0.0001" id="k3-w" value="0.0246" oninput="calcKarl()"></td><td><input step="0.01" id="k3-v" value="4.95" oninput="calcKarl()"></td><td id="k3-t"></td></tr>
+      </tbody>
+    </table>
+    <div class="result-grid-2">
+      <div class="result-box"><div class="label">滴定度平均值</div><div class="val" id="karl-avg">—</div><div class="unit">g/mL</div></div>
+      <div class="result-box"><div class="label">相对标准偏差</div><div class="val" id="karl-rsd">—</div><div class="unit">%</div></div>
+    </div>
+  </div>
+
+  <!-- 高氯酸浓度校正 -->
+  <div class="calc-card s2">
+    <div class="stage-title">高氯酸浓度校正（仅用于咪唑、969）</div>
+    <div style="background:#f0f9ff; padding:8px 12px; border-radius:4px; font-size:12px; color:#4080ff; margin:8px 0;">
+      校正浓度 = 标定浓度 / [1 + 0.0011 × (室温 − 标定温度)]
+    </div>
+    <div class="input-row-3">
+      <div class="input-group"><div class="input-label">标定浓度 (mol/L)</div><input step="0.0001" id="pyr-calib" value="0.1033" onfocus="this.dataset.prev=this.value" onblur="if(this.value!==this.dataset.prev && !confirm('确定修改标定浓度？')){this.value=this.dataset.prev} else {updateCommonCorr();}"></div>
+      <div class="input-group"><div class="input-label">标定温度 (℃)</div><input step="0.1" id="pyr-temp-cal" value="24.5" onfocus="this.dataset.prev=this.value" onblur="if(this.value!==this.dataset.prev && !confirm('确定修改标定温度？')){this.value=this.dataset.prev} else {updateCommonCorr();}"></div>
+      <div class="input-group"><div class="input-label">室温 (℃)</div><input step="0.1" id="pyr-temp-room" value="26.5" oninput="updateCommonCorr()"></div>
+    </div>
+    <div class="result-line">
+      <span class="label">校正后浓度</span><span class="val green" id="common-corr-conc"></span>
+      <button onclick="applyCorrConc()" style="margin-left:auto;">应用到高氯酸滴定</button>
+    </div>
+  </div>
+
+  <!-- 液碱 -->
+  <div class="calc-card">
+    <div class="stage-title">液碱含量 <span style="font-size:11px;color:#909399;">含量% = V × 40.01 × HCl浓度 / (w × 10)</span></div>
+    <div class="input-row-3">
+      <div class="input-group"><div class="input-label">空白（无）</div><input value="0" disabled></div>
+      <div class="input-group"><div class="input-label">常数</div><div class="const-display">40.01</div></div>
+      <div class="input-group"><div class="input-label">HCl浓度 <span class="unit-note">(mol/L)</span></div><input id="ly-conc" value="0.09943" step="0.0001" oninput="calcLyAll()"></div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:8px;">
+      <div><div class="stage-title" style="font-size:12px">正算</div><table><thead><tr><th>#</th><th>称样量 (g)</th><th>体积 (mL)</th><th>含量 %</th></tr></thead><tbody><tr><td>1</td><td><input id="ly1-w" oninput="calcLyAll()"></td><td><input id="ly1-v" oninput="calcLyAll()"></td><td id="ly1-r"></td></tr><tr><td>2</td><td><input id="ly2-w" oninput="calcLyAll()"></td><td><input id="ly2-v" oninput="calcLyAll()"></td><td id="ly2-r"></td></tr></tbody></table></div>
+      <div><div class="stage-title" style="font-size:12px">反推</div><table><thead><tr><th>#</th><th>称样量 (g)</th><th>含量 %</th><th>计算体积 (mL)</th></tr></thead><tbody><tr><td>1</td><td><input id="rly1-w" oninput="calcLyAll()"></td><td><input id="rly1-pct" oninput="calcLyAll()"></td><td id="rly1-v"></td></tr><tr><td>2</td><td><input id="rly2-w" oninput="calcLyAll()"></td><td><input id="rly2-pct" oninput="calcLyAll()"></td><td id="rly2-v"></td></tr></tbody></table></div>
+    </div>
+    <div class="result-line"><span class="label">平均值</span><span class="val green" id="ly-avg"></span></div>
+  </div>
+
+  <!-- 回收咪唑 -->
+  <div class="calc-card s2">
+    <div class="stage-title">回收咪唑 <span style="font-size:11px;color:#909399;">含量% = (V-空白) × 0.06808 × HClO₄校正浓度 × 100 / w</span></div>
+    <div class="input-row-3">
+      <div class="input-group"><div class="input-label">空白</div><input id="imid-blank" value="0.03" step="0.01" oninput="calcImidAll()"></div>
+      <div class="input-group"><div class="input-label">常数</div><div class="const-display">0.06808</div></div>
+      <div class="input-group"><div class="input-label">HClO₄浓度 <span class="unit-note">(校正)</span></div><input id="imid-conc" step="0.0001" disabled style="background:#f0f9ff;"></div>
+    </div>
+    <div class="param-row">
+      <div class="param-item"><span class="plabel">空白</span><br><span class="pval" id="imid-blank-disp">0.03</span></div>
+      <div class="param-item"><span class="plabel">常数</span><br><span class="pval">0.06808</span></div>
+      <div class="param-item"><span class="plabel">校正浓度</span><br><span class="pval" id="imid-conc-disp">0.1031</span></div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:8px;">
+      <div><div class="stage-title" style="font-size:12px">正算</div><table><thead><tr><th>#</th><th>称样量 (g)</th><th>体积 (mL)</th><th>含量 %</th></tr></thead><tbody><tr><td>1</td><td><input id="imid1-w" oninput="calcImidAll()"></td><td><input id="imid1-v" oninput="calcImidAll()"></td><td id="imid1-r"></td></tr><tr><td>2</td><td><input id="imid2-w" oninput="calcImidAll()"></td><td><input id="imid2-v" oninput="calcImidAll()"></td><td id="imid2-r"></td></tr></tbody></table></div>
+      <div><div class="stage-title" style="font-size:12px">反推</div><table><thead><tr><th>#</th><th>称样量 (g)</th><th>含量 %</th><th>计算体积 (mL)</th></tr></thead><tbody><tr><td>1</td><td><input id="rimid1-w" oninput="calcImidAll()"></td><td><input id="rimid1-pct" oninput="calcImidAll()"></td><td id="rimid1-v"></td></tr><tr><td>2</td><td><input id="rimid2-w" oninput="calcImidAll()"></td><td><input id="rimid2-pct" oninput="calcImidAll()"></td><td id="rimid2-v"></td></tr></tbody></table></div>
+    </div>
+    <div class="result-line"><span class="label">平均值</span><span class="val green" id="imid-avg"></span></div>
+  </div>
+
+  <!-- 969 -->
+  <div class="calc-card s3">
+    <div class="stage-title">969 <span style="font-size:11px;color:#909399;">含量% = (V-空白) × 0.1321 × HClO₄校正浓度 × 100 / 1</span></div>
+    <div class="input-row-3">
+      <div class="input-group"><div class="input-label">空白</div><input id="nine-blank" value="0.03" step="0.01" oninput="calcNineAll()"></div>
+      <div class="input-group"><div class="input-label">常数</div><div class="const-display">0.1321</div></div>
+      <div class="input-group"><div class="input-label">HClO₄浓度 <span class="unit-note">(校正)</span></div><input id="nine-conc" step="0.0001" disabled style="background:#f0f9ff;"></div>
+    </div>
+    <div class="param-row">
+      <div class="param-item"><span class="plabel">空白</span><br><span class="pval" id="nine-blank-disp">0.03</span></div>
+      <div class="param-item"><span class="plabel">常数</span><br><span class="pval">0.1321</span></div>
+      <div class="param-item"><span class="plabel">校正浓度</span><br><span class="pval" id="nine-conc-disp">0.1031</span></div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:8px;">
+      <div><div class="stage-title" style="font-size:12px">正算</div><table><thead><tr><th>#</th><th>样品体积 (mL)</th><th>体积 (mL)</th><th>含量 %</th></tr></thead><tbody><tr><td>1</td><td><input value="1" disabled></td><td><input id="nine1-v" oninput="calcNineAll()"></td><td id="nine1-r"></td></tr><tr><td>2</td><td><input value="1" disabled></td><td><input id="nine2-v" oninput="calcNineAll()"></td><td id="nine2-r"></td></tr></tbody></table></div>
+      <div><div class="stage-title" style="font-size:12px">反推</div><table><thead><tr><th>#</th><th>样品体积 (mL)</th><th>含量 %</th><th>计算体积 (mL)</th></tr></thead><tbody><tr><td>1</td><td><input value="1" disabled></td><td><input id="rnine1-pct" oninput="calcNineAll()"></td><td id="rnine1-v"></td></tr><tr><td>2</td><td><input value="1" disabled></td><td><input id="rnine2-pct" oninput="calcNineAll()"></td><td id="rnine2-v"></td></tr></tbody></table></div>
+    </div>
+    <div class="result-line"><span class="label">平均值</span><span class="val green" id="nine-avg"></span></div>
+    <!-- 水分计算 -->
+    <div style="margin-top:16px; padding-left:8px; border-left:3px solid #67c23a; font-size:13px; font-weight:600;">水分计算 (卡氏滴定度 × 消耗体积 × 100 / 1)</div>
+    <div class="input-row-3">
+      <div class="input-group"><div class="input-label">卡氏滴定度 (g/mL) <span style="color:#f56c6c;">手动</span></div><input id="water-titer" type="number" step="0.0001" value="0.0050" oninput="calcWater()"></div>
+      <div class="input-group"><div class="input-label">消耗体积 (mL)</div><input id="water-vol" type="number" step="0.01" value="0" oninput="calcWater()"></div>
+      <div class="input-group"><div class="input-label">水分结果 (%)</div><input id="water-result" disabled style="background:#f9f9f9; font-weight:600; color:#4080ff;"></div>
+    </div>
+  </div>
+
+  <!-- 甲酸 -->
+  <div class="calc-card s4">
+    <div class="stage-title">甲酸 <span style="font-size:11px;color:#909399;">含量% = V × 0.04603 × NaOH浓度 × 100 / w</span></div>
+    <div class="input-row-3">
+      <div class="input-group"><div class="input-label">空白（无）</div><input value="0" disabled></div>
+      <div class="input-group"><div class="input-label">常数</div><div class="const-display">0.04603</div></div>
+      <div class="input-group"><div class="input-label">NaOH浓度 <span class="unit-note">(mol/L)</span></div><input id="form-conc" value="0.1036" step="0.0001" oninput="calcFormAll()"></div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:8px;">
+      <div>
+        <div class="stage-title" style="font-size:12px">正算</div>
+        <table id="form-pos-table">
+          <thead><tr><th>#</th><th>称样量 (g)</th><th>体积 (mL)</th><th>含量 %</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td><input id="form1-w" oninput="calcFormAll()"></td><td><input id="form1-v" oninput="calcFormAll()"></td><td id="form1-r"></td></tr>
+            <tr><td>2</td><td><input id="form2-w" oninput="calcFormAll()"></td><td><input id="form2-v" oninput="calcFormAll()"></td><td id="form2-r"></td></tr>
+          </tbody>
+        </table>
+        <button onclick="addFormPosRow()" style="margin-top:5px">➕ 新增行</button>
+      </div>
+      <div>
+        <div class="stage-title" style="font-size:12px">反推</div>
+        <table id="form-rev-table">
+          <thead><tr><th>#</th><th>称样量 (g)</th><th>含量 %</th><th>计算体积 (mL)</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td><input id="rform1-w" oninput="calcFormAll()"></td><td><input id="rform1-pct" oninput="calcFormAll()"></td><td id="rform1-v"></td></tr>
+            <tr><td>2</td><td><input id="rform2-w" oninput="calcFormAll()"></td><td><input id="rform2-pct" oninput="calcFormAll()"></td><td id="rform2-v"></td></tr>
+          </tbody>
+        </table>
+        <button onclick="addFormRevRow()" style="margin-top:5px">➕ 新增行</button>
+      </div>
+    </div>
+    <div class="result-line"><span class="label">平均值</span><span class="val green" id="form-avg"></span></div>
+  </div>
+
+  <div class="btn-bar"><button class="btn-clear" onclick="clearTab3()">清空全部</button></div>
+</div>
+
+<script>
+  // ========== 精确银行家舍入 ==========
+  function roundBanker(num, places) {
+    if (isNaN(num) || num === null || num === '') return '';
+    let str = Number(num).toFixed(places + 10);
+    let [intPart, decPart] = str.split('.');
+    if (!decPart || decPart.length <= places) return Number(num).toFixed(places);
+    let keep = decPart.substring(0, places);
+    let next = decPart[places];
+    let afterNext = decPart.substring(places + 1);
+    let carry = 0;
+    if (next > '5') carry = 1;
+    else if (next === '5') {
+      if (/[1-9]/.test(afterNext)) carry = 1;
+      else {
+        let lastKeep = keep[keep.length - 1];
+        if (parseInt(lastKeep) % 2 === 1) carry = 1;
+      }
+    }
+    if (carry) {
+      let intKeep = parseInt(keep) + 1;
+      keep = intKeep.toString().padStart(places, '0');
+      if (keep.length > places) {
+        intPart = (parseInt(intPart) + 1).toString();
+        keep = keep.substring(1);
+      }
+    }
+    return intPart + '.' + keep.padEnd(places, '0');
+  }
+
+  // ========== 自动保存与恢复（修复卡式标定等数据显示丢失） ==========
+  const STORAGE_KEY = 'page3_lye_series_state';
+
+  function saveState() {
+    const data = {};
+    // 保存所有带id的 input 和 select
+    document.querySelectorAll('input[id], select[id]').forEach(el => {
+      if (el.type === 'checkbox' || el.type === 'radio') data[el.id] = el.checked;
+      else data[el.id] = el.value;
+    });
+    // 保存卡式标定结果显示
+    ['k1-t','k2-t','k3-t','karl-avg','karl-rsd'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) data[id] = el.innerText;
+    });
+    // 保存其他结果显示（各平均值、参数显示等）
+    ['ly-avg','imid-avg','nine-avg','form-avg','imid-blank-disp','imid-conc-disp','nine-blank-disp','nine-conc-disp','common-corr-conc','water-result'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) data[id] = el.innerText || el.value;
+    });
+    // 甲酸动态行数
+    data['formRowCount'] = formRowCount;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  let saveTimeout;
+  function debouncedSave() {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(saveState, 300);
+  }
+
+  function loadState() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return false;
+    const data = JSON.parse(saved);
+    // 恢复 input/select
+    document.querySelectorAll('input[id], select[id]').forEach(el => {
+      if (data[el.id] !== undefined) {
+        if (el.type === 'checkbox' || el.type === 'radio') el.checked = data[el.id];
+        else el.value = data[el.id];
+      }
+    });
+    // 恢复卡式标定结果
+    ['k1-t','k2-t','k3-t','karl-avg','karl-rsd'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && data[id] !== undefined) el.innerText = data[id];
+    });
+    // 恢复其他显示结果
+    ['ly-avg','imid-avg','nine-avg','form-avg','imid-blank-disp','imid-conc-disp','nine-blank-disp','nine-conc-disp','common-corr-conc','water-result'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && data[id] !== undefined) {
+        if (el.tagName === 'INPUT') el.value = data[id];
+        else el.innerText = data[id];
+      }
+    });
+    // 恢复甲酸动态行数并重建表格
+    if (data['formRowCount']) {
+      formRowCount = data['formRowCount'];
+      const posTbody = document.querySelector('#form-pos-table tbody');
+      const revTbody = document.querySelector('#form-rev-table tbody');
+      posTbody.innerHTML = '';
+      revTbody.innerHTML = '';
+      for (let i = 1; i <= formRowCount; i++) {
+        addFormPosRowToTable(i);
+        addFormRevRowToTable(i);
+      }
+    }
+    return true;
+  }
+
+  function clearStorage() { localStorage.removeItem(STORAGE_KEY); }
+  document.addEventListener('input', debouncedSave);
+  document.addEventListener('change', debouncedSave);
+
+  // 卡式标定
+  function calcKarl() {
+    const blank = Number(document.getElementById('karl-blank').value) || 0;
+    const w1 = Number(document.getElementById('k1-w').value) || 0, v1 = Number(document.getElementById('k1-v').value) || 0;
+    const w2 = Number(document.getElementById('k2-w').value) || 0, v2 = Number(document.getElementById('k2-v').value) || 0;
+    const w3 = Number(document.getElementById('k3-w').value) || 0, v3 = Number(document.getElementById('k3-v').value) || 0;
+    const calcT = (w, v) => v - blank > 0 ? w / (v - blank) : '';
+    const t1 = calcT(w1, v1), t2 = calcT(w2, v2), t3 = calcT(w3, v3);
+    document.getElementById('k1-t').innerText = t1 ? roundBanker(t1, 6) : '';
+    document.getElementById('k2-t').innerText = t2 ? roundBanker(t2, 6) : '';
+    document.getElementById('k3-t').innerText = t3 ? roundBanker(t3, 6) : '';
+    const arr = [t1, t2, t3].filter(t => t !== '');
+    if (arr.length > 0) {
+      const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+      document.getElementById('karl-avg').innerText = roundBanker(avg, 6);
+      if (arr.length >= 2) {
+        const std = Math.sqrt(arr.map(x => Math.pow(x - avg, 2)).reduce((a, b) => a + b, 0) / (arr.length - 1));
+        document.getElementById('karl-rsd').innerText = roundBanker(std / avg * 100, 2);
+      } else document.getElementById('karl-rsd').innerText = '—';
+    } else {
+      document.getElementById('karl-avg').innerText = '—';
+      document.getElementById('karl-rsd').innerText = '—';
+    }
+  }
+  function clearKarl() {
+    document.getElementById('karl-blank').value = '0.50';
+    ['k1-w','k1-v','k2-w','k2-v','k3-w','k3-v'].forEach(id => document.getElementById(id).value = '');
+    calcKarl();
+    saveState();
+  }
+
+  // 高氯酸校正
+  function updateCommonCorr() {
+    const calib = parseFloat(document.getElementById('pyr-calib').value) || 0;
+    const tCal = parseFloat(document.getElementById('pyr-temp-cal').value) || 0;
+    const tRoom = parseFloat(document.getElementById('pyr-temp-room').value) || 0;
+    let corr = 0;
+    if (calib > 0) corr = calib / (1 + 0.0011 * (tRoom - tCal));
+    document.getElementById('common-corr-conc').innerText = corr ? roundBanker(corr, 4) : '';
+    if (corr) {
+      document.getElementById('imid-conc').value = roundBanker(corr, 4);
+      document.getElementById('nine-conc').value = roundBanker(corr, 4);
+      document.getElementById('imid-conc-disp').innerText = roundBanker(corr, 4);
+      document.getElementById('nine-conc-disp').innerText = roundBanker(corr, 4);
+    }
+    calcImidAll();
+    calcNineAll();
+  }
+  function applyCorrConc() { updateCommonCorr(); }
+
+  // 反推验证（与之前一致）
+  function verifyReverse(prefix, i, w, pct, conc, constVal, blank, type, vRounded) {
+    const vEl = document.getElementById(prefix + i + '-v');
+    if (!vEl) return;
+    let calcPct;
+    switch (type) {
+      case 'ly': calcPct = vRounded * constVal * conc / (w * 10); break;
+      case 'imid': calcPct = (vRounded - blank) * constVal * conc * 100 / w; break;
+      case 'nine': calcPct = (vRounded - blank) * constVal * conc * 100; break;
+      case 'form': calcPct = vRounded * constVal * conc * 100 / w; break;
+      default: return;
+    }
+    const diff = Math.abs(calcPct - pct);
+    if (diff <= 0.005) {
+      vEl.innerText = vRounded.toFixed(2);
+    } else {
+      let bestV = vRounded, minDiff = diff;
+      for (let adj = -0.02; adj <= 0.02; adj += 0.01) {
+        const testV = +(vRounded + adj).toFixed(2);
+        if (testV < 0) continue;
+        let testPct;
+        switch (type) {
+          case 'ly': testPct = testV * constVal * conc / (w * 10); break;
+          case 'imid': testPct = (testV - blank) * constVal * conc * 100 / w; break;
+          case 'nine': testPct = (testV - blank) * constVal * conc * 100; break;
+          case 'form': testPct = testV * constVal * conc * 100 / w; break;
+        }
+        const d = Math.abs(testPct - pct);
+        if (d < minDiff) { minDiff = d; bestV = testV; }
+      }
+      const bestPct = type === 'ly' ? bestV * constVal * conc / (w * 10) :
+        type === 'imid' ? (bestV - blank) * constVal * conc * 100 / w :
+        type === 'nine' ? (bestV - blank) * constVal * conc * 100 :
+        bestV * constVal * conc * 100 / w;
+      if (minDiff < diff) {
+        vEl.innerHTML = `${vRounded.toFixed(2)}<br><span class="warn-text">无法精确匹配，建议: ${bestV.toFixed(2)} (含量≈${roundBanker(bestPct, 2)}%)</span>`;
+      } else {
+        vEl.innerHTML = `${vRounded.toFixed(2)}<br><span class="warn-text">无法精确匹配</span>`;
+      }
+    }
+  }
+
+  // 液碱
+  function calcLyAll() {
+    const conc = Number(document.getElementById('ly-conc').value) || 0;
+    const constVal = 40.01;
+    const vals = [];
+    for (let i = 1; i <= 2; i++) {
+      const wEl = document.getElementById('ly' + i + '-w');
+      const vEl = document.getElementById('ly' + i + '-v');
+      const resEl = document.getElementById('ly' + i + '-r');
+      if (!wEl || !vEl || !resEl) break;
+      const w = Number(wEl.value) || 0;
+      const v = Number(vEl.value) || 0;
+      if (w > 0 && v > 0 && conc > 0) {
+        const res = v * constVal * conc / (w * 10);
+        resEl.innerText = roundBanker(res, 2);
+        vals.push(Number(roundBanker(res, 2)));
+      } else resEl.innerText = '';
+    }
+    for (let i = 1; i <= 2; i++) {
+      const wEl = document.getElementById('rly' + i + '-w');
+      const pctEl = document.getElementById('rly' + i + '-pct');
+      const vEl = document.getElementById('rly' + i + '-v');
+      if (!wEl || !pctEl || !vEl) break;
+      const w = Number(wEl.value) || 0;
+      const pct = Number(pctEl.value) || 0;
+      if (w > 0 && pct > 0 && conc > 0) {
+        const v = (pct * w * 10) / (constVal * conc);
+        const vStr = roundBanker(v, 2);
+        const vNum = parseFloat(vStr);
+        vEl.innerText = vStr;
+        verifyReverse('rly', i, w, pct, conc, constVal, 0, 'ly', vNum);
+      } else vEl.innerText = '';
+    }
+    document.getElementById('ly-avg').innerText = vals.length ? roundBanker(vals.reduce((a, b) => a + b, 0) / vals.length, 2) + '%' : '';
+  }
+
+  // 咪唑
+  function calcImidAll() {
+    const blank = Number(document.getElementById('imid-blank').value) || 0;
+    const conc = Number(document.getElementById('imid-conc').value) || 0;
+    const constVal = 0.06808;
+    const vals = [];
+    for (let i = 1; i <= 2; i++) {
+      const wEl = document.getElementById('imid' + i + '-w');
+      const vEl = document.getElementById('imid' + i + '-v');
+      const resEl = document.getElementById('imid' + i + '-r');
+      if (!wEl || !vEl || !resEl) break;
+      const w = Number(wEl.value) || 0;
+      const v = Number(vEl.value) || 0;
+      if (w > 0 && v > 0 && conc > 0) {
+        const res = (v - blank) * constVal * conc * 100 / w;
+        resEl.innerText = roundBanker(res, 2);
+        vals.push(Number(roundBanker(res, 2)));
+      } else resEl.innerText = '';
+    }
+    for (let i = 1; i <= 2; i++) {
+      const wEl = document.getElementById('rimid' + i + '-w');
+      const pctEl = document.getElementById('rimid' + i + '-pct');
+      const vEl = document.getElementById('rimid' + i + '-v');
+      if (!wEl || !pctEl || !vEl) break;
+      const w = Number(wEl.value) || 0;
+      const pct = Number(pctEl.value) || 0;
+      if (w > 0 && pct > 0 && conc > 0) {
+        const v = (pct * w) / (constVal * conc * 100) + blank;
+        const vStr = roundBanker(v, 2);
+        const vNum = parseFloat(vStr);
+        vEl.innerText = vStr;
+        verifyReverse('rimid', i, w, pct, conc, constVal, blank, 'imid', vNum);
+      } else vEl.innerText = '';
+    }
+    document.getElementById('imid-blank-disp').innerText = blank.toFixed(2);
+    document.getElementById('imid-avg').innerText = vals.length ? roundBanker(vals.reduce((a, b) => a + b, 0) / vals.length, 2) + '%' : '';
+  }
+
+  // 969
+  function calcNineAll() {
+    const blank = Number(document.getElementById('nine-blank').value) || 0;
+    const conc = Number(document.getElementById('nine-conc').value) || 0;
+    const constVal = 0.1321;
+    const vals = [];
+    for (let i = 1; i <= 2; i++) {
+      const vEl = document.getElementById('nine' + i + '-v');
+      const resEl = document.getElementById('nine' + i + '-r');
+      if (!vEl || !resEl) break;
+      const v = Number(vEl.value) || 0;
+      if (v > 0 && conc > 0) {
+        const res = (v - blank) * constVal * conc * 100;
+        resEl.innerText = roundBanker(res, 2);
+        vals.push(Number(roundBanker(res, 2)));
+      } else resEl.innerText = '';
+    }
+    for (let i = 1; i <= 2; i++) {
+      const pctEl = document.getElementById('rnine' + i + '-pct');
+      const vEl = document.getElementById('rnine' + i + '-v');
+      if (!pctEl || !vEl) break;
+      const pct = Number(pctEl.value) || 0;
+      if (pct > 0 && conc > 0) {
+        const v = pct / (constVal * conc * 100) + blank;
+        const vStr = roundBanker(v, 2);
+        const vNum = parseFloat(vStr);
+        vEl.innerText = vStr;
+        verifyReverse('rnine', i, 1, pct, conc, constVal, blank, 'nine', vNum);
+      } else vEl.innerText = '';
+    }
+    document.getElementById('nine-blank-disp').innerText = blank.toFixed(2);
+    document.getElementById('nine-avg').innerText = vals.length ? roundBanker(vals.reduce((a, b) => a + b, 0) / vals.length, 2) + '%' : '';
+  }
+
+  // 水分计算
+  function calcWater() {
+    const titer = parseFloat(document.getElementById('water-titer').value) || 0;
+    const vol = parseFloat(document.getElementById('water-vol').value) || 0;
+    const result = titer * vol * 100;
+    document.getElementById('water-result').value = roundBanker(result, 2);
+  }
+
+  // 甲酸
+  let formRowCount = 2;
+  function addFormPosRowToTable(index) {
+    const tbody = document.querySelector('#form-pos-table tbody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${index}</td><td><input id="form${index}-w" oninput="calcFormAll()"></td><td><input id="form${index}-v" oninput="calcFormAll()"></td><td id="form${index}-r"></td>`;
+    tbody.appendChild(tr);
+  }
+  function addFormRevRowToTable(index) {
+    const tbody = document.querySelector('#form-rev-table tbody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${index}</td><td><input id="rform${index}-w" oninput="calcFormAll()"></td><td><input id="rform${index}-pct" oninput="calcFormAll()"></td><td id="rform${index}-v"></td>`;
+    tbody.appendChild(tr);
+  }
+
+  function calcFormAll() {
+    const conc = Number(document.getElementById('form-conc').value) || 0;
+    const constVal = 0.04603;
+    const vals = [];
+    for (let i = 1; i <= formRowCount; i++) {
+      const wEl = document.getElementById('form' + i + '-w');
+      const vEl = document.getElementById('form' + i + '-v');
+      const resEl = document.getElementById('form' + i + '-r');
+      if (!wEl || !vEl || !resEl) continue;
+      const w = Number(wEl.value) || 0;
+      const v = Number(vEl.value) || 0;
+      if (w > 0 && v > 0 && conc > 0) {
+        const res = v * constVal * conc * 100 / w;
+        resEl.innerText = roundBanker(res, 2);
+        vals.push(Number(roundBanker(res, 2)));
+      } else resEl.innerText = '';
+    }
+    for (let i = 1; i <= formRowCount; i++) {
+      const wEl = document.getElementById('rform' + i + '-w');
+      const pctEl = document.getElementById('rform' + i + '-pct');
+      const vEl = document.getElementById('rform' + i + '-v');
+      if (!wEl || !pctEl || !vEl) continue;
+      const w = Number(wEl.value) || 0;
+      const pct = Number(pctEl.value) || 0;
+      if (w > 0 && pct > 0 && conc > 0) {
+        const v = (pct * w) / (constVal * conc * 100);
+        const vStr = roundBanker(v, 2);
+        const vNum = parseFloat(vStr);
+        vEl.innerText = vStr;
+        verifyReverse('rform', i, w, pct, conc, constVal, 0, 'form', vNum);
+      } else vEl.innerText = '';
+    }
+    document.getElementById('form-avg').innerText = vals.length ? roundBanker(vals.reduce((a, b) => a + b, 0) / vals.length, 2) + '%' : '';
+  }
+
+  function addFormPosRow() {
+    formRowCount++;
+    addFormPosRowToTable(formRowCount);
+    saveState();
+  }
+  function addFormRevRow() {
+    addFormRevRowToTable(formRowCount);
+    saveState();
+  }
+
+  function clearTab3() {
+    document.getElementById('pyr-calib').value = '0.1033';
+    document.getElementById('pyr-temp-cal').value = '24.5';
+    document.getElementById('pyr-temp-room').value = '26.5';
+    updateCommonCorr();
+    document.getElementById('ly-conc').value = '0.09943';
+    document.getElementById('imid-blank').value = '0.03';
+    document.getElementById('nine-blank').value = '0.03';
+    document.getElementById('form-conc').value = '0.1036';
+    document.querySelectorAll('input:not([type=hidden]):not([disabled]):not([readonly])').forEach(inp => {
+      if (inp.id && (inp.id.includes('-w') || inp.id.includes('-v') || inp.id.includes('-pct'))) inp.value = '';
+    });
+    document.querySelector('#form-pos-table tbody').innerHTML = '';
+    document.querySelector('#form-rev-table tbody').innerHTML = '';
+    formRowCount = 2;
+    for (let i = 1; i <= 2; i++) {
+      addFormPosRowToTable(i);
+      addFormRevRowToTable(i);
+    }
+    calcLyAll(); calcImidAll(); calcNineAll(); calcFormAll(); calcWater();
+    clearStorage();
+    saveState();
+  }
+
+  window.onload = function () {
+    if (!loadState()) {
+      calcKarl();
+      updateCommonCorr();
+      calcLyAll();
+      calcImidAll();
+      calcNineAll();
+      calcFormAll();
+      calcWater();
+    } else {
+      // 已经恢复数据，重新计算一次确保所有结果显示
+      calcKarl();
+      updateCommonCorr();
+      calcLyAll();
+      calcImidAll();
+      calcNineAll();
+      calcFormAll();
+      calcWater();
+    }
+  };
+</script>
+</body>
+</html>
