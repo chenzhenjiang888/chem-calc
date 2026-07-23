@@ -2,6 +2,7 @@
   "name": "化验计算器合集",
   "short_name": "化验计算器",
   "start_url": "/index.html",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#ffffff",
