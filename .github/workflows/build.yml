@@ -10,11 +10,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Generate APK using PWABuilder Docker image
+      - name: Generate APK using PWABuilder CLI
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/app \
-            mcr.microsoft.com/pwabuilder/pwabuilder:latest \
+            mcr.microsoft.com/pwabuilder/cli \
             pwabuilder package -p android -o /app/output
 
       - name: Upload APK
