@@ -9,14 +9,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install PWABuilder
-        run: npm install -g @pwabuilder/cli
-      - name: Build APK
-        run: pwabuilder package -p android -o ./output
+
+      - name: Generate APK using PWABuilder Docker image
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/app \
+            mcr.microsoft.com/pwabuilder/pwabuilder:latest \
+            pwabuilder package -p android -o /app/output
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
