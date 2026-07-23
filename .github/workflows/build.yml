@@ -10,16 +10,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Generate APK with PWABuilder Action
+        uses: pwabuilder/github-action@v1
         with:
-          node-version: '20'
-
-      - name: Install PWABuilder CLI
-        run: npm install -g @pwabuilder/cli
-
-      - name: Build APK
-        run: pwabuilder package -p android -o ./output
+          platform: android
+          output-path: ./output
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
