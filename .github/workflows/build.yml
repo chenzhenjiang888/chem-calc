@@ -1,4 +1,4 @@
-name: Build APK
+name: Build APK with Bubblewrap
 on:
   push:
     branches: [ main ]
@@ -15,11 +15,35 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Run PWABuilder
-        run: npx @pwabuilder/cli package -p android -o ./output
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Bubblewrap CLI
+        run: npm install -g @bubblewrap/cli
+
+      - name: Generate debug keystore
+        run: |
+          keytool -genkey -v \
+            -keystore debug.keystore \
+            -alias androiddebugkey \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass android -keypass android \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Initialize Bubblewrap project
+        run: |
+          bw init --manifest manifest.json --directory ./bw-project
+
+      - name: Build APK
+        run: |
+          cd bw-project
+          bw build
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: MyApp
-          path: ./output/*.apk
+          path: ./bw-project/app-release-signed.apk
