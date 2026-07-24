@@ -13,7 +13,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '22'  # 改用 Node.js 22
+          node-version: '22'
 
       - name: Setup Java
         uses: actions/setup-java@v3
@@ -34,13 +34,12 @@ jobs:
             -dname "CN=Android Debug,O=Android,C=US"
 
       - name: Initialize Bubblewrap project
-        run: |
-          bw init --manifest manifest.json --directory ./bw-project
+        run: npx @bubblewrap/cli init --manifest manifest.json --directory ./bw-project
 
       - name: Build APK
         run: |
           cd bw-project
-          bw build
+          npx @bubblewrap/cli build
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
