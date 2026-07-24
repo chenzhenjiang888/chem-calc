@@ -33,8 +33,9 @@ jobs:
             -storepass android -keypass android \
             -dname "CN=Android Debug,O=Android,C=US"
 
-      - name: Initialize Bubblewrap project (skip JDK ask)
-        run: npx @bubblewrap/cli init --manifest manifest.json --directory ./bw-project --skip-jdk-check --jdk-path $JAVA_HOME
+      - name: Initialize Bubblewrap project (auto-answer No to JDK)
+        run: |
+          printf 'n\n' | npx @bubblewrap/cli init --manifest manifest.json --directory ./bw-project
 
       - name: Build APK
         run: |
