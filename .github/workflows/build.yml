@@ -10,13 +10,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Generate APK with PWABuilder Action
-        uses: pwabuilder/github-action@v1
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          platform: android
-          output-path: ./output
-          # 关键：指定您的 manifest 文件路径
-          manifest-path: ./manifest.json
+          node-version: '20'
+
+      - name: Run PWABuilder
+        run: npx @pwabuilder/cli package -p android -o ./output
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
